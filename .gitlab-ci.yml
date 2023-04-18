@@ -1,0 +1,13 @@
+default:
+  image: "node:16"
+
+  services:
+    - docker:dind
+
+  before_script:
+    - node --version
+    - npm --version
+
+test:
+  script:
+    - npm test
