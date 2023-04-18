@@ -10,4 +10,5 @@ default:
 
 test:
   script:
+    - npm install
     - npm test
