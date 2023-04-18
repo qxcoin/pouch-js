@@ -1,0 +1,31 @@
+{
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules/**"],
+  "compilerOptions": {
+    "target": "es2020",
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "declaration": true,
+    "outDir": "dist",
+    "inlineSourceMap": true,
+    "removeComments": true,
+
+    "module": "es2020",
+    "moduleResolution": "node",
+    "rootDir": "src",
+    "baseUrl": "src",
+
+    "skipLibCheck": true,
+
+    "strict": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true
+  }
+}

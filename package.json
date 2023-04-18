@@ -1,0 +1,38 @@
+{
+  "name": "pouch-js",
+  "author": "Sina Sharifzade <sharifzadesina@gamil.com>",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "jest --detectOpenHandles",
+    "build": "tsc && tsc-alias",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@open-rpc/client-js": "^1.8.1",
+    "bip32": "^4.0.0",
+    "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^6.1.0",
+    "ecpair": "^2.1.0",
+    "keccak": "^3.0.3",
+    "monero-javascript": "^0.7.8",
+    "tiddlybit": "^0.0.6",
+    "tiny-secp256k1": "^2.2.1",
+    "tronweb": "^5.1.0",
+    "web3": "^4.0.1-rc.0",
+    "wif": "^2.0.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/keccak": "^3.0.1",
+    "@types/wif": "^2.0.2",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "tsc-alias": "^1.8.3",
+    "type-fest": "^3.7.2",
+    "typescript": "^5.0.2"
+  }
+}
