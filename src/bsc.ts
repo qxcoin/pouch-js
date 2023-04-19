@@ -1,8 +1,8 @@
 import { Web3, ContractAbi } from "web3";
 import { BIP32Factory, BIP32API } from "bip32";
-import { EthereumWallet } from "ethereum";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
+import { EthereumWallet } from "./ethereum.js";
 import {
   Wallet,
   Address,
@@ -11,7 +11,7 @@ import {
   NetworkType,
   SpendableTransaction,
   TokenTransaction,
-} from "wallet";
+} from "./wallet.js";
 
 export interface BscWalletConfig {
   provider: string,

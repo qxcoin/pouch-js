@@ -12,7 +12,7 @@ import {
   TransactionInput,
   TransactionOutput,
   TokenTransaction,
-} from "wallet";
+} from "./wallet.js";
 
 export interface EthereumWalletConfig {
   provider: string,

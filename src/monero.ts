@@ -1,7 +1,16 @@
 import monerojs, { MoneroWalletListener } from "monero-javascript";
-import { Wallet, Address, Transaction, RawTransaction, NetworkType, TransactionOutput, SpendableTransaction, TransactionInput } from "wallet";
 import * as bip39 from 'bip39';
 import createKeccakHash from "keccak";
+import {
+  Wallet,
+  Address,
+  Transaction,
+  RawTransaction,
+  NetworkType,
+  TransactionOutput,
+  SpendableTransaction,
+  TransactionInput,
+} from "./wallet.js";
 
 export interface MoneroWalletConfig {
   server: string,

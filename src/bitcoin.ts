@@ -13,7 +13,7 @@ import {
   RawTransaction,
   NetworkType,
   SpendableTransaction,
-} from "wallet";
+} from "./wallet.js";
 
 export interface BitcoinWalletConfig {
   rpcServer: string,

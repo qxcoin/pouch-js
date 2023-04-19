@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "test": "jest --detectOpenHandles",
-    "build": "tsc && tsc-alias",
+    "build": "tsc",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -30,7 +30,6 @@
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.1",
-    "tsc-alias": "^1.8.3",
     "typescript": "^5.0.2"
   }
 }

@@ -1,8 +1,8 @@
-import { BitcoinWallet, BitcoinWalletConfig } from "bitcoin";
-import { MoneroWallet, MoneroWalletConfig } from "monero";
-import { EthereumWallet, EthereumWalletConfig } from "ethereum";
-import { TronWallet, TronWalletConfig } from "tron";
-import { BscWallet, BscWalletConfig } from "bsc";
+import { BitcoinWallet, BitcoinWalletConfig } from "./bitcoin.js";
+import { MoneroWallet, MoneroWalletConfig } from "./monero.js";
+import { EthereumWallet, EthereumWalletConfig } from "./ethereum.js";
+import { TronWallet, TronWalletConfig } from "./tron.js";
+import { BscWallet, BscWalletConfig } from "./bsc.js";
 
 export type NetworkType = "mainnet" | "testnet";
 
