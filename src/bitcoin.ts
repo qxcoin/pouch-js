@@ -16,7 +16,7 @@ import {
 } from "wallet";
 
 export interface BitcoinWalletConfig {
-  rpcUrl: string,
+  rpcServer: string,
   fee: bigint,
 }
 
@@ -35,7 +35,7 @@ export class BitcoinWallet implements Wallet {
     this.config = config;
     this.bip32 = BIP32Factory(ecc);
     this.ecPair = ECPairFactory(ecc);
-    this.client = new Client(new RequestManager([new HTTPTransport(this.config.rpcUrl)]));
+    this.client = new Client(new RequestManager([new HTTPTransport(this.config.rpcServer)]));
   }
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
