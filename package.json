@@ -1,5 +1,5 @@
 {
-  "name": "pouch-js",
+  "name": "pouch",
   "author": "Sina Sharifzade <sharifzadesina@gamil.com>",
   "private": true,
   "main": "dist/index.js",
