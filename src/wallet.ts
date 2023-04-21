@@ -96,6 +96,8 @@ export interface Wallet {
   getRequiredConfirmations(): Promise<number>;
 }
 
+export type WalletTypes = "bitcoin" | "monero" | "ethereum" | "tron" | "bsc";
+
 export interface WalletConfigs {
   bitcoin: BitcoinWalletConfig,
   monero: MoneroWalletConfig,
@@ -110,8 +112,8 @@ export class WalletFactory {
     // pass
   }
 
-  create(name: string): Wallet {
-    switch (name) {
+  create(type: WalletTypes): Wallet {
+    switch (type) {
       case 'bitcoin':
         return this.createBitcoinWallet();
       case 'monero':
@@ -123,7 +125,7 @@ export class WalletFactory {
       case 'bsc':
         return this.createBscWallet();
       default:
-        throw new Error(`Wallet [${name}] is not supported.`);
+        throw new Error(`Wallet [${type}] is not supported.`);
     }
   }
 
