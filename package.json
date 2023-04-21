@@ -20,7 +20,7 @@
     "monero-javascript": "^0.7.8",
     "tiny-secp256k1": "^2.2.1",
     "tronweb": "^5.1.0",
-    "web3": "^4.0.1-rc.0",
+    "web3": "4.0.1-rc.0",
     "wif": "^2.0.6"
   },
   "devDependencies": {
