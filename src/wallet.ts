@@ -96,8 +96,6 @@ export interface Wallet {
   getRequiredConfirmations(): Promise<number>;
 }
 
-export type WalletTypes = "bitcoin" | "monero" | "ethereum" | "tron" | "bsc";
-
 export interface WalletConfigs {
   bitcoin: BitcoinWalletConfig,
   monero: MoneroWalletConfig,
@@ -105,6 +103,8 @@ export interface WalletConfigs {
   tron: TronWalletConfig,
   bsc: BscWalletConfig,
 }
+
+export type WalletTypes = keyof WalletConfigs;
 
 export class WalletFactory {
 

@@ -49,9 +49,9 @@ export class BitcoinWallet implements Wallet {
   }
 
   async getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction>> {
-    const transactions: Transaction[] = [];
+    let transactions: Transaction[] = [];
     for (let height = fromBlock; height <= toBlock; height++)
-      transactions.concat(await this.getBlockTransactions(height));
+      transactions = transactions.concat(await this.getBlockTransactions(height));
     return transactions;
   }
 
@@ -60,7 +60,7 @@ export class BitcoinWallet implements Wallet {
     const result = await this.client.request({ method: "getblock", params: [blockHash, 2] });
     const transactions: Transaction[] = [];
     result.tx.forEach((tx: any) => {
-      transactions.push(this.convertTx(tx.hex));
+      transactions.push(this.convertTx(bitcoinjs.Transaction.fromHex(tx.hex)));
     });
     return transactions;
   }
@@ -78,33 +78,60 @@ export class BitcoinWallet implements Wallet {
       inputs.push(new TransactionInput(i, this.extractAddressFromInput(inp)));
     });
     tx.outs.forEach((out, i) => {
-      outputs.push(new TransactionOutput(i, bitcoinjs.address.fromOutputScript(out.script, this.network), BigInt(out.value)));
+      outputs.push(new TransactionOutput(i, this.extractAddressFromOutput(out), BigInt(out.value)));
     });
     return new Transaction(tx.getId(), tx.toHex(), inputs, outputs);
   }
 
   private extractAddressFromInput(inp: bitcoinjs.TxInput): string {
-    let payment;
-    if (inp.witness.length) {
-      if (inp.witness.length > 2) {
-        payment = bitcoinjs.payments.p2wsh({ redeem: { output: inp.witness[inp.witness.length - 1] }, network: this.network});
-      } else {
-        payment = bitcoinjs.payments.p2wpkh({ pubkey: inp.witness[inp.witness.length - 1], network: this.network});
-      }
+    try {
+      return this.extractAddressFromWitnessedInput(inp);
+    } catch {}
+    try {
+      return bitcoinjs.payments.p2sh({ input: inp.script, network: this.network }).address!;
+    } catch {}
+    try {
+      return bitcoinjs.payments.p2pkh({ input: inp.script, network: this.network }).address!;
+    } catch {}
+    if (0 === parseInt(inp.hash.toString('hex'), 16)) {
+      return 'Block Reward';
+    } else if (inp.script.length) {
+      return inp.script.toString('hex');
+    } else {
+      throw new Error(`Failed to extract address from input.`);
     }
-    if (inp.script.length) {
-      if (payment) {
-        payment = bitcoinjs.payments.p2sh({ redeem: payment, network: this.network });
-      } else if (inp.script.at(0) === 0) {
-        payment = bitcoinjs.payments.p2sh({ input: inp.script, network: this.network });
-      } else {
-        payment = bitcoinjs.payments.p2pkh({ input: inp.script, network: this.network });
-      }
+  }
+
+  private extractAddressFromWitnessedInput(inp: bitcoinjs.TxInput): string {
+    let payment;
+    if (inp.witness.length > 2) {
+      payment = bitcoinjs.payments.p2wsh({ redeem: { output: inp.witness[inp.witness.length - 1] }, network: this.network});
+    } else if (inp.witness.length === 2) {
+      payment = bitcoinjs.payments.p2wpkh({ pubkey: inp.witness[inp.witness.length - 1], network: this.network});
+    } else {
+      throw new Error('Input has invalid witness script.');
+    }
+    if (payment && inp.script.length) {
+      payment = bitcoinjs.payments.p2sh({ redeem: payment, network: this.network });
     }
     if (!payment || !payment.address) {
-      throw new Error(`Failed to extract input address from output ${inp.index} of tx ${inp.hash}.`);
+      throw new Error('Failed to extract address from input.');
     } else {
       return payment.address;
+    }
+  }
+
+  private extractAddressFromOutput(out: bitcoinjs.TxOutput): string {
+    try {
+      return bitcoinjs.address.fromOutputScript(out.script, this.network);
+    } catch {}
+    try {
+      return bitcoinjs.payments.p2pkh({ pubkey: out.script.subarray(1, -1), network: this.network }).address!;
+    } catch {}
+    if (out.script.length) {
+      return out.script.toString('hex');
+    } else {
+      throw new Error(`Failed to extract address from output.`);
     }
   }
 
