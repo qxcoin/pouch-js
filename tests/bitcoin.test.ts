@@ -2,6 +2,12 @@ import wif from 'wif';
 import { Address, RawTransaction } from '../src/wallet';
 import { BitcoinWallet } from '../src/bitcoin';
 
+test('can retrieve block height', async () => {
+  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const height = await wallet.getLastBlockHeight();
+  expect(typeof height).toBe('number');
+});
+
 // see: https://github.com/libbitcoin/libbitcoin-system/wiki/Altcoin-Version-Mappings#7-bitcoin-btc-bip-3944-technology-examples
 test('can create valid address', async () => {
   const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { rpcServer: 'http://example.com', fee: 0n });

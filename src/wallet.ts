@@ -86,6 +86,7 @@ export class TokenTransaction {
 }
 
 export interface Wallet {
+  getLastBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
   getMempool(): Promise<Array<string>>;
   getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction | TokenTransaction>>;

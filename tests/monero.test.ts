@@ -3,6 +3,12 @@ import { MoneroWallet } from '../src/monero';
 
 jest.setTimeout(240000);
 
+test('can retrieve block height', async () => {
+  const wallet = new MoneroWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { server: 'https://testnet.xmr.ditatompel.com:443' });
+  const height = await wallet.getLastBlockHeight();
+  expect(typeof height).toBe('number');
+});
+
 test('can create valid address', async () => {
   const wallet = new MoneroWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { server: 'https://testnet.xmr.ditatompel.com:443' });
   const addr = await wallet.getAddress(0, 0);

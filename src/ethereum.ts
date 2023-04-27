@@ -35,6 +35,10 @@ export class EthereumWallet implements Wallet {
     this.bip32 = BIP32Factory(ecc);
   }
 
+  async getLastBlockHeight(): Promise<number> {
+    return Number(await this.web3.eth.getBlockNumber());
+  }
+
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/60'").deriveHardened(accountIndex).derive(0).derive(index);
     const acc = this.web3.eth.accounts.privateKeyToAccount(node.privateKey!);

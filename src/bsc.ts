@@ -36,6 +36,10 @@ export class BscWallet implements Wallet {
     this.ethereumWallet = new EthereumWallet(mnemonic, networkType, config);
   }
 
+  async getLastBlockHeight(): Promise<number> {
+    return this.ethereumWallet.getLastBlockHeight();
+  }
+
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/9006'").deriveHardened(accountIndex).derive(0).derive(index);
     const acc = this.web3.eth.accounts.privateKeyToAccount(node.privateKey!);

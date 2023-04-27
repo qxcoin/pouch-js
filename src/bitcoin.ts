@@ -38,6 +38,10 @@ export class BitcoinWallet implements Wallet {
     this.client = new Client(new RequestManager([new HTTPTransport(this.config.rpcServer)]));
   }
 
+  async getLastBlockHeight(): Promise<number> {
+    return (await this.client.request({ method: "getblockchaininfo" }))['blocks'];
+  }
+
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/0'").deriveHardened(accountIndex).derive(0).derive(index);
     const p = bitcoinjs.payments.p2wpkh({ network: this.network, pubkey: node.publicKey });

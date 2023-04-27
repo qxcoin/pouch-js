@@ -16,6 +16,7 @@ import {
 
 export interface TronWalletConfig {
   provider: string,
+  apiKey: string,
 }
 
 export class TronWallet implements Wallet {
@@ -28,16 +29,21 @@ export class TronWallet implements Wallet {
   constructor(mnemonic: string, _networkType: NetworkType, config: TronWalletConfig) {
     this.mnemonic = mnemonic;
     this.config = config;
-    this.tronweb = new TronWeb({ fullHost: this.config.provider });
+    this.tronweb = new TronWeb({ fullHost: this.config.provider, headers: { 'TRON-PRO-API-KEY': config.apiKey }, });
     this.bip32 = BIP32Factory(ecc);
   }
 
-  encodeAddress(address: string): string {
+  private encodeAddress(address: string): string {
     return TronWeb.utils.crypto.getBase58CheckAddress(address);
   }
 
-  decodeAddress(address: string): string {
+  private decodeAddress(address: string): string {
     return Buffer.from(TronWeb.utils.crypto.decodeBase58Address(address)).toString('hex');
+  }
+
+  async getLastBlockHeight(): Promise<number> {
+    const block = await this.tronweb.trx.getCurrentBlock();
+    return block['block_header']['raw_data']['number'];
   }
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
