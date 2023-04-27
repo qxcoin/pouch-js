@@ -16,7 +16,7 @@ import {
 
 export interface TronWalletConfig {
   provider: string,
-  apiKey: string,
+  headers?: Record<string, string>,
 }
 
 export class TronWallet implements Wallet {
@@ -29,7 +29,7 @@ export class TronWallet implements Wallet {
   constructor(mnemonic: string, _networkType: NetworkType, config: TronWalletConfig) {
     this.mnemonic = mnemonic;
     this.config = config;
-    this.tronweb = new TronWeb({ fullHost: this.config.provider, headers: { 'TRON-PRO-API-KEY': config.apiKey }, });
+    this.tronweb = new TronWeb({ fullHost: this.config.provider, headers: config.headers, });
     this.bip32 = BIP32Factory(ecc);
   }
 
