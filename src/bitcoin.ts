@@ -54,10 +54,10 @@ export class BitcoinWallet implements Wallet {
     return await this.client.request({ method: "getrawmempool", params: [false, false] });
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction>> {
-    let transactions: Transaction[] = [];
+  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction>>> {
+    let transactions: Record<number, Array<Transaction>> = {};
     for (let height = fromBlock; height <= toBlock; height++)
-      transactions = transactions.concat(await this.getBlockTransactions(height));
+      transactions[height] = await this.getBlockTransactions(height);
     return transactions;
   }
 

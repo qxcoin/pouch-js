@@ -89,7 +89,7 @@ export interface Wallet {
   getLastBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
   getMempool(): Promise<Array<string>>;
-  getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction | TokenTransaction>>;
+  getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>>;
   getTransaction(hash: string): Promise<Transaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction>;

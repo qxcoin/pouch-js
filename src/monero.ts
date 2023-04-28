@@ -62,12 +62,18 @@ export class MoneroWallet implements Wallet {
     return [];
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction>> {
+  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction>>> {
     const wallet = await this.createWalletFull();
     await wallet.sync(this.syncListener(wallet, toBlock), fromBlock);
     const txs = await wallet.getTxs({ minHeight: fromBlock, maxHeight: toBlock, isIncoming: true });
     await wallet.close();
-    return txs.map((tx: any) => this.convertTx(tx));
+    const transactions: Record<number, Array<Transaction>> = {};
+    for (const tx of txs) {
+      const height = tx.getHeight();
+      if (undefined === transactions[height]) transactions[height] = [];
+      transactions[height]!.push(this.convertTx(tx));
+    }
+    return transactions;
   }
 
   async getTransaction(hash: string): Promise<Transaction> {
@@ -78,7 +84,7 @@ export class MoneroWallet implements Wallet {
     return this.convertTx(tx);
   }
 
-  async convertTx(tx: any): Promise<Transaction> {
+  private convertTx(tx: any): Transaction {
     // it is not possible to read inputs from XMR blockchain, they are hidden
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];

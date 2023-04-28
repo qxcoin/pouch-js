@@ -49,10 +49,10 @@ export class EthereumWallet implements Wallet {
     return [];
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction | TokenTransaction>> {
-    const transactions: Array<Transaction | TokenTransaction> = [];
+  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
+    const transactions: Record<number, Array<Transaction | TokenTransaction>> = {};
     for (let height = fromBlock; height <= toBlock; height++)
-      transactions.concat(await this.getBlockTransactions(height));
+      transactions[height] = await this.getBlockTransactions(height);
     return transactions;
   }
 

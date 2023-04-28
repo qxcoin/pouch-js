@@ -56,14 +56,28 @@ export class TronWallet implements Wallet {
     return [];
   }
 
-  async getTransactions(from: number, to: number): Promise<Array<Transaction | TokenTransaction>> {
+  async getTransactions(from: number, to: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
+    if (from === to) return { [from]: await this.getBlockTransactions(from) };
     const blocks = await this.tronweb.trx.getBlockRange(from, to);
-    const transactions: Array<Transaction | TokenTransaction> = [];
+    const transactions: Record<number, Array<Transaction | TokenTransaction>> = {};
     for (const block of blocks) {
+      if (undefined === block.transactions) continue;
+      const height = block['block_header']['raw_data']['number'];
+      transactions[height] = [];
       for (const tx of block.transactions) {
         const transaction = this.convertTx(tx);
-        if (transaction) transactions.push(transaction);
+        if (transaction) transactions[height]!.push(transaction);
       }
+    }
+    return transactions;
+  }
+
+  private async getBlockTransactions(height: number): Promise<Array<Transaction | TokenTransaction>> {
+    const block = await this.tronweb.trx.getBlock(height);
+    const transactions: Array<Transaction | TokenTransaction> = [];
+    for (const tx of block.transactions) {
+      const transaction = this.convertTx(tx);
+      if (transaction) transactions.push(transaction);
     }
     return transactions;
   }
@@ -79,8 +93,9 @@ export class TronWallet implements Wallet {
   private convertTx(tx: any): Transaction | TokenTransaction | false {
     const contract = tx.raw_data.contract[0];
     if (contract.type === 'TriggerSmartContract') return this.convertTokenTx(tx);
+    else if (contract.type !== 'TransferContract') return false;
     const value = contract.parameter.value;
-    const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.from_address))];
+    const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.owner_address))];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, value.amount, async () => this.encodeAddress(value.to_address))];
     return new Transaction(tx.txID, tx.raw_data_hex, inputs, outputs);
   }
@@ -88,10 +103,10 @@ export class TronWallet implements Wallet {
   private convertTokenTx(tx: any): TokenTransaction | false {
     const contract = tx.raw_data.contract[0];
     const value = contract.parameter.value;
-    const from = this.encodeAddress(value.owner_address);
     const method = value.data.slice(8);
     // we only support transfer (a9059cbb) method for now
     if (method !== 'a9059cbb') return false;
+    const from = this.encodeAddress(value.owner_address);
     const params = TronWeb.utils.abi.decodeParams(["address", "uint256"], value.data, true);
     return new TokenTransaction(tx.txID, tx.raw_data_hex, from, params[0].toString(), value.contract_address, params[1].toBigInt());
   }

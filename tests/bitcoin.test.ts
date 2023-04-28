@@ -110,9 +110,9 @@ test('can handle Block Reward as input', async () => {
 });
 
 // test using the first and second block of testnet network
-test('can retrieve block transactions', async () => {
+test('can retrieve transactions of a block range', async () => {
   const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
   const txs = await wallet.getTransactions(1, 2);
-  expect(txs[0]?.hash).toBe('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
-  expect(txs[1]?.hash).toBe('20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2');
+  expect(txs[1]?.[0]?.hash).toBe('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
+  expect(txs[2]?.[0]?.hash).toBe('20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2');
 });

@@ -50,7 +50,7 @@ export class BscWallet implements Wallet {
     return this.ethereumWallet.getMempool();
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Array<Transaction | TokenTransaction>> {
+  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
     return this.ethereumWallet.getTransactions(fromBlock, toBlock);
   }
 
