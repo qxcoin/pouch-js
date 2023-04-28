@@ -76,8 +76,8 @@ export class EthereumWallet implements Wallet {
 
   private convertTx(tx: any): Transaction | TokenTransaction | false {
     if ('0x' !== tx.input) return this.convertTokenTx(tx);
-    const inputs: TransactionInput[] = [new TransactionInput(0, tx.from)];
-    const outputs: TransactionOutput[] = [new TransactionOutput(0, tx.to!, tx.value!)];
+    const inputs: TransactionInput[] = [new TransactionInput(0, async () => tx.from)];
+    const outputs: TransactionOutput[] = [new TransactionOutput(0, tx.value!, async () => tx.to!)];
     return new Transaction(tx.hash, JSON.stringify(tx), inputs, outputs);
   }
 

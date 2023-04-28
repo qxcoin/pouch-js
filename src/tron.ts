@@ -80,8 +80,8 @@ export class TronWallet implements Wallet {
     const contract = tx.raw_data.contract[0];
     if (contract.type === 'TriggerSmartContract') return this.convertTokenTx(tx);
     const value = contract.parameter.value;
-    const inputs: TransactionInput[] = [new TransactionInput(0, this.encodeAddress(value.from_address))];
-    const outputs: TransactionOutput[] = [new TransactionOutput(0, this.encodeAddress(value.to_address), value.amount)];
+    const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.from_address))];
+    const outputs: TransactionOutput[] = [new TransactionOutput(0, value.amount, async () => this.encodeAddress(value.to_address))];
     return new Transaction(tx.txID, tx.raw_data_hex, inputs, outputs);
   }
 

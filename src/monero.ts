@@ -84,7 +84,7 @@ export class MoneroWallet implements Wallet {
     const outputs: TransactionOutput[] = [];
     tx.getTransfers().forEach((t: any, i: number) => {
       if (t.isIncoming())
-        outputs.push(new TransactionOutput(i, t.getAddress(), BigInt(t.getAmount().toString())));
+        outputs.push(new TransactionOutput(i, BigInt(t.getAmount().toString()), async () => t.getAddress()));
     });
     return new Transaction(tx.getHash(), tx.getFullHex(), inputs, outputs);
   }

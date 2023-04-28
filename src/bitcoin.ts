@@ -1,4 +1,5 @@
 import * as bitcoinjs from "bitcoinjs-lib";
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
@@ -36,6 +37,7 @@ export class BitcoinWallet implements Wallet {
     this.bip32 = BIP32Factory(ecc);
     this.ecPair = ECPairFactory(ecc);
     this.client = new Client(new RequestManager([new HTTPTransport(this.config.rpcServer)]));
+    bitcoinjs.initEccLib(ecc);
   }
 
   async getLastBlockHeight(): Promise<number> {
@@ -79,18 +81,15 @@ export class BitcoinWallet implements Wallet {
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];
     tx.ins.forEach((inp, i) => {
-      inputs.push(new TransactionInput(i, this.extractAddressFromInput(inp)));
+      inputs.push(new TransactionInput(i, async () => this.extractAddressFromInput(inp)));
     });
     tx.outs.forEach((out, i) => {
-      outputs.push(new TransactionOutput(i, this.extractAddressFromOutput(out), BigInt(out.value)));
+      outputs.push(new TransactionOutput(i, BigInt(out.value), async () => this.extractAddressFromOutput(out)));
     });
     return new Transaction(tx.getId(), tx.toHex(), inputs, outputs);
   }
 
-  private extractAddressFromInput(inp: bitcoinjs.TxInput): string {
-    try {
-      return this.extractAddressFromWitnessedInput(inp);
-    } catch {}
+  private async extractAddressFromInput(inp: bitcoinjs.TxInput): Promise<string> {
     try {
       return bitcoinjs.payments.p2sh({ input: inp.script, network: this.network }).address!;
     } catch {}
@@ -99,30 +98,16 @@ export class BitcoinWallet implements Wallet {
     } catch {}
     if (0 === parseInt(inp.hash.toString('hex'), 16)) {
       return 'Block Reward';
-    } else if (inp.script.length) {
-      return inp.script.toString('hex');
     } else {
-      throw new Error(`Failed to extract address from input.`);
+      return await this.extractAddressFromInputPrevOut(inp);
     }
   }
 
-  private extractAddressFromWitnessedInput(inp: bitcoinjs.TxInput): string {
-    let payment;
-    if (inp.witness.length > 2) {
-      payment = bitcoinjs.payments.p2wsh({ redeem: { output: inp.witness[inp.witness.length - 1] }, network: this.network});
-    } else if (inp.witness.length === 2) {
-      payment = bitcoinjs.payments.p2wpkh({ pubkey: inp.witness[inp.witness.length - 1], network: this.network});
-    } else {
-      throw new Error('Input has invalid witness script.');
-    }
-    if (payment && inp.script.length) {
-      payment = bitcoinjs.payments.p2sh({ redeem: payment, network: this.network });
-    }
-    if (!payment || !payment.address) {
-      throw new Error('Failed to extract address from input.');
-    } else {
-      return payment.address;
-    }
+  private async extractAddressFromInputPrevOut(inp: bitcoinjs.TxInput): Promise<string> {
+    const txId = reverseBuffer(inp.hash).toString('hex');
+    const result = await this.client.request({ method: "getrawtransaction", params: [txId, true] });
+    const tx = bitcoinjs.Transaction.fromHex(result['hex']);
+    return this.extractAddressFromOutput(tx.outs[inp.index]!);
   }
 
   private extractAddressFromOutput(out: bitcoinjs.TxOutput): string {

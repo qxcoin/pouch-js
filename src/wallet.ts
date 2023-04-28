@@ -32,21 +32,21 @@ export class TransactionInput {
 
   constructor(
     public readonly index: number,
-    public readonly address: string,
+    public readonly address: () => Promise<string>,
   ) {
     // pass
-  };
+  }
 }
 
 export class TransactionOutput {
 
   constructor(
     public readonly index: number,
-    public readonly address: string,
     public readonly value: bigint,
+    public readonly address: () => Promise<string>,
   ) {
     // pass
-  };
+  }
 }
 
 export class Transaction extends RawTransaction {

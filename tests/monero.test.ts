@@ -26,6 +26,6 @@ test('can create transaction', async () => {
 test('can retrieve transaction', async () => {
   const wallet = new MoneroWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { server: 'https://testnet.xmr.ditatompel.com:443' });
   const tx = await wallet.getTransaction('2c4dacb50197ae631da53a4f5fd8baca44386e8e53fe1c7d348db5d3e88133b2');
-  expect(tx.outputs[0]?.address).toBe('9wkakjS8mtaPUpuwQ8mjhi8yJZMa8z4gHejQrKbZPLxGA3W565xthkUdKb7ZqFJi8SKaFfSCFzZHjJiwdyLDA3uNKJMhPUV');
+  expect(await tx.outputs[0]?.address()).toBe('9wkakjS8mtaPUpuwQ8mjhi8yJZMa8z4gHejQrKbZPLxGA3W565xthkUdKb7ZqFJi8SKaFfSCFzZHjJiwdyLDA3uNKJMhPUV');
   expect(tx.outputs[0]?.value).toBe(1000000000000n);
 });
