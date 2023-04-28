@@ -12,6 +12,8 @@ import {
   TransactionInput,
   TransactionOutput,
   TokenTransaction,
+  Mempool,
+  Block,
 } from "./wallet.js";
 
 export interface EthereumWalletConfig {
@@ -45,15 +47,16 @@ export class EthereumWallet implements Wallet {
     return new Address(index, accountIndex, acc.address, node.privateKey!);
   }
 
-  async getMempool(): Promise<Array<string>> {
-    return [];
+  async getMempool(): Promise<Mempool> {
+    return new Mempool([]);
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
-    const transactions: Record<number, Array<Transaction | TokenTransaction>> = {};
-    for (let height = fromBlock; height <= toBlock; height++)
-      transactions[height] = await this.getBlockTransactions(height);
-    return transactions;
+  async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
+    const blocks: Block[] = [];
+    for (let height = fromHeight; height <= toHeight; height++) {
+      blocks.push(new Block(height, await this.getBlockTransactions(height)));
+    }
+    return blocks;
   }
 
   private async getBlockTransactions(height: number): Promise<Array<Transaction | TokenTransaction>> {

@@ -10,6 +10,8 @@ import {
   TransactionOutput,
   SpendableTransaction,
   TransactionInput,
+  Mempool,
+  Block,
 } from "./wallet.js";
 
 export interface MoneroWalletConfig {
@@ -58,22 +60,26 @@ export class MoneroWallet implements Wallet {
     return addr;
   }
 
-  async getMempool(): Promise<Array<string>> {
-    return [];
+  async getMempool(): Promise<Mempool> {
+    return new Mempool([]);
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction>>> {
+  async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
     const wallet = await this.createWalletFull();
-    await wallet.sync(this.syncListener(wallet, toBlock), fromBlock);
-    const txs = await wallet.getTxs({ minHeight: fromBlock, maxHeight: toBlock, isIncoming: true });
+    await wallet.sync(this.syncListener(wallet, toHeight), fromHeight);
+    const txs = await wallet.getTxs({ minHeight: fromHeight, maxHeight: toHeight, isIncoming: true });
     await wallet.close();
-    const transactions: Record<number, Array<Transaction>> = {};
+    const txMap = new Map<number, Transaction[]>();
     for (const tx of txs) {
       const height = tx.getHeight();
-      if (undefined === transactions[height]) transactions[height] = [];
-      transactions[height]!.push(this.convertTx(tx));
+      if (txMap.has(height)) txMap.get(height)!.push(this.convertTx(tx));
+      else txMap.set(height, [this.convertTx(tx)]);
     }
-    return transactions;
+    const blocks: Block[] = [];
+    for (let height = fromHeight; height <= toHeight; height++) {
+      blocks.push(new Block(height, txMap.get(height) ?? []));
+    }
+    return blocks;
   }
 
   async getTransaction(hash: string): Promise<Transaction> {

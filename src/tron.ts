@@ -12,6 +12,8 @@ import {
   TransactionInput,
   TransactionOutput,
   TokenTransaction,
+  Block,
+  Mempool,
 } from "./wallet.js";
 
 export interface TronWalletConfig {
@@ -52,24 +54,26 @@ export class TronWallet implements Wallet {
     return new Address(index, accountIndex, acc, node.privateKey!);
   }
 
-  async getMempool(): Promise<Array<string>> {
-    return [];
+  async getMempool(): Promise<Mempool> {
+    return new Mempool([]);
   }
 
-  async getTransactions(from: number, to: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
-    if (from === to) return { [from]: await this.getBlockTransactions(from) };
-    const blocks = await this.tronweb.trx.getBlockRange(from, to);
-    const transactions: Record<number, Array<Transaction | TokenTransaction>> = {};
-    for (const block of blocks) {
-      if (undefined === block.transactions) continue;
-      const height = block['block_header']['raw_data']['number'];
-      transactions[height] = [];
-      for (const tx of block.transactions) {
-        const transaction = this.convertTx(tx);
-        if (transaction) transactions[height]!.push(transaction);
-      }
+  async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
+    if (fromHeight === toHeight) return [new Block(fromHeight, await this.getBlockTransactions(fromHeight))];
+    const blocks = await this.tronweb.trx.getBlockRange(fromHeight, toHeight);
+    return blocks.map((block: any) => {
+      return this.convertBlock(block);
+    });
+  }
+
+  private convertBlock(block: any): Block {
+    const height: number = block['block_header']['raw_data']['number'];
+    const transactions: Array<Transaction | TokenTransaction> = [];
+    for (const tx of (block.transactions ?? [])) {
+      const transaction = this.convertTx(tx);
+      if (transaction) transactions.push(transaction);
     }
-    return transactions;
+    return new Block(height, transactions);
   }
 
   private async getBlockTransactions(height: number): Promise<Array<Transaction | TokenTransaction>> {
@@ -85,8 +89,9 @@ export class TronWallet implements Wallet {
   async getTransaction(hash: string): Promise<Transaction | TokenTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
-    if (!transaction)
+    if (!transaction) {
       throw new Error(`Failed to convert transaction ${tx.txID}.`);
+    }
     return transaction;
   }
 

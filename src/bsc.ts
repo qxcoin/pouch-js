@@ -11,6 +11,8 @@ import {
   NetworkType,
   SpendableTransaction,
   TokenTransaction,
+  Mempool,
+  Block,
 } from "./wallet.js";
 
 export interface BscWalletConfig {
@@ -46,12 +48,12 @@ export class BscWallet implements Wallet {
     return new Address(index, accountIndex, acc.address, node.privateKey!);
   }
 
-  async getMempool(): Promise<Array<string>> {
+  async getMempool(): Promise<Mempool> {
     return this.ethereumWallet.getMempool();
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>> {
-    return this.ethereumWallet.getTransactions(fromBlock, toBlock);
+  async getBlocks(from: number, to: number): Promise<Block[]> {
+    return this.ethereumWallet.getBlocks(from, to);
   }
 
   async getTransaction(hash: string): Promise<Transaction | TokenTransaction> {

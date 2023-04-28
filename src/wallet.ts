@@ -85,11 +85,30 @@ export class TokenTransaction {
   }
 }
 
+export class Mempool {
+
+  constructor(
+    public readonly transactionHashes: string[],
+  ) {
+    // pass
+  }
+}
+
+export class Block {
+
+  constructor(
+    public readonly height: number,
+    public readonly transactions: Array<Transaction | TokenTransaction>,
+  ) {
+    // pass
+  }
+}
+
 export interface Wallet {
   getLastBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
-  getMempool(): Promise<Array<string>>;
-  getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction | TokenTransaction>>>;
+  getMempool(): Promise<Mempool>;
+  getBlocks(fromHeight: number, toHeight: number): Promise<Block[]>;
   getTransaction(hash: string): Promise<Transaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction>;

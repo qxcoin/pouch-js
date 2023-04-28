@@ -14,6 +14,8 @@ import {
   RawTransaction,
   NetworkType,
   SpendableTransaction,
+  Mempool,
+  Block,
 } from "./wallet.js";
 
 export interface BitcoinWalletConfig {
@@ -50,15 +52,17 @@ export class BitcoinWallet implements Wallet {
     return new Address(index, accountIndex, p.address!, node.privateKey!);
   }
 
-  async getMempool(): Promise<Array<string>> {
-    return await this.client.request({ method: "getrawmempool", params: [false, false] });
+  async getMempool(): Promise<Mempool> {
+    const hashes = await this.client.request({ method: "getrawmempool", params: [false, false] });
+    return new Mempool(hashes);
   }
 
-  async getTransactions(fromBlock: number, toBlock: number): Promise<Record<number, Array<Transaction>>> {
-    let transactions: Record<number, Array<Transaction>> = {};
-    for (let height = fromBlock; height <= toBlock; height++)
-      transactions[height] = await this.getBlockTransactions(height);
-    return transactions;
+  async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
+    const blocks: Block[] = [];
+    for (let height = fromHeight; height <= toHeight; height++) {
+      blocks.push(new Block(height, await this.getBlockTransactions(height)));
+    }
+    return blocks;
   }
 
   private async getBlockTransactions(height: number): Promise<Array<Transaction>> {
