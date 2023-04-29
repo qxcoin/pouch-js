@@ -124,17 +124,21 @@ export class MoneroWallet implements Wallet {
     return new SpendableTransaction(tx.getHash(), tx.getMetadata());
   }
 
+  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
+    throw new Error('Tokens are not supported by Monero blockchain.');
+  }
+
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     const wallet = await this.createWalletFull();
     wallet.relayTx(transaction.data);
     await wallet.close();
   }
 
-  async getRequiredConfirmations() {
+  getRequiredConfirmations() {
     return 10;
   }
 
-  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
-    throw new Error('Tokens are not supported by Bitcoin blockchain.');
+  getBlockTime() {
+    return 2 * 60 * 1000;
   }
 }

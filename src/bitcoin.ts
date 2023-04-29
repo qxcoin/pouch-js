@@ -169,15 +169,19 @@ export class BitcoinWallet implements Wallet {
     return new SpendableTransaction(tx.getId(), tx.toHex());
   }
 
+  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
+    throw new Error('Tokens are not supported by Bitcoin blockchain.');
+  }
+
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     await this.client.request({ method: "sendrawtransaction", params: [transaction.data, 0] });
   }
 
-  async getRequiredConfirmations() {
+  getRequiredConfirmations() {
     return 1;
   }
 
-  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
-    throw new Error('Tokens are not supported by Bitcoin blockchain.');
+  getBlockTime() {
+    return 10 * 60 * 1000;
   }
 }

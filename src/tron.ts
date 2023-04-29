@@ -122,19 +122,23 @@ export class TronWallet implements Wallet {
     return new SpendableTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
-    this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
-  }
-
-  async getRequiredConfirmations() {
-    return 1;
-  }
-
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value }];
     const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, parameter, from);
     const signedTx = this.tronweb.trx.sign(tx, from.privateKey);
     return new SpendableTransaction(signedTx.txID, JSON.stringify(signedTx));
+  }
+
+  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+    this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
+  }
+
+  getRequiredConfirmations() {
+    return 1;
+  }
+
+  getBlockTime() {
+    return 3 * 1000;
   }
 }

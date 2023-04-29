@@ -113,7 +113,8 @@ export interface Wallet {
   createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction>;
   broadcastTransaction(transaction: SpendableTransaction): Promise<void>;
-  getRequiredConfirmations(): Promise<number>;
+  getRequiredConfirmations(): number;
+  getBlockTime(): number;
 }
 
 export interface WalletConfigs {

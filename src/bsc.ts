@@ -64,15 +64,19 @@ export class BscWallet implements Wallet {
     return this.ethereumWallet.createTransaction(from, to, value, spending);
   }
 
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
+    return this.ethereumWallet.createTokenTransaction(contractAddress, from, to, value);
+  }
+
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     return this.ethereumWallet.broadcastTransaction(transaction);
   }
 
-  async getRequiredConfirmations() {
+  getRequiredConfirmations() {
     return 1;
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
-    return this.ethereumWallet.createTokenTransaction(contractAddress, from, to, value);
+  getBlockTime() {
+    return 3 * 1000;
   }
 }

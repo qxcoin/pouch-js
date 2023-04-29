@@ -102,14 +102,6 @@ export class EthereumWallet implements Wallet {
     return new SpendableTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
-    await this.web3.eth.sendSignedTransaction(transaction.data);
-  }
-
-  async getRequiredConfirmations() {
-    return 1;
-  }
-
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
     const contractAbi = this.config.contracts?.[contractAddress];
     if (undefined === contractAbi) throw new Error(`ABI for contract ${contractAddress} is not available.`);
@@ -121,5 +113,17 @@ export class EthereumWallet implements Wallet {
     const tx = { from: from.hash, to, value: '0x0', data, gasLimit, gasPrice };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
     return new SpendableTransaction(signedTx.transactionHash, signedTx.rawTransaction);
+  }
+
+  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+    await this.web3.eth.sendSignedTransaction(transaction.data);
+  }
+
+  getRequiredConfirmations() {
+    return 1;
+  }
+
+  getBlockTime() {
+    return 12 * 1000;
   }
 }
