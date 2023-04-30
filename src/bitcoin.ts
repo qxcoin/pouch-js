@@ -176,12 +176,4 @@ export class BitcoinWallet implements Wallet {
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     await this.client.request({ method: "sendrawtransaction", params: [transaction.data, 0] });
   }
-
-  getRequiredConfirmations() {
-    return 1;
-  }
-
-  getBlockTime() {
-    return 10 * 60 * 1000;
-  }
 }

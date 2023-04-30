@@ -71,12 +71,4 @@ export class BscWallet implements Wallet {
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     return this.ethereumWallet.broadcastTransaction(transaction);
   }
-
-  getRequiredConfirmations() {
-    return 1;
-  }
-
-  getBlockTime() {
-    return 3 * 1000;
-  }
 }

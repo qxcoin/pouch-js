@@ -133,12 +133,4 @@ export class MoneroWallet implements Wallet {
     wallet.relayTx(transaction.data);
     await wallet.close();
   }
-
-  getRequiredConfirmations() {
-    return 10;
-  }
-
-  getBlockTime() {
-    return 2 * 60 * 1000;
-  }
 }

@@ -118,12 +118,4 @@ export class EthereumWallet implements Wallet {
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     await this.web3.eth.sendSignedTransaction(transaction.data);
   }
-
-  getRequiredConfirmations() {
-    return 1;
-  }
-
-  getBlockTime() {
-    return 12 * 1000;
-  }
 }

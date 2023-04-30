@@ -133,12 +133,4 @@ export class TronWallet implements Wallet {
   async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
     this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
   }
-
-  getRequiredConfirmations() {
-    return 1;
-  }
-
-  getBlockTime() {
-    return 3 * 1000;
-  }
 }
