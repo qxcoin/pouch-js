@@ -13,7 +13,6 @@ import {
   Transaction,
   RawTransaction,
   NetworkType,
-  SpendableTransaction,
   Mempool,
   Block,
 } from "./wallet.js";
@@ -128,7 +127,7 @@ export class BitcoinWallet implements Wallet {
     }
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction> {
     const prevOuts: Array<{ tx: bitcoinjs.Transaction, index: number }> = [];
     spending.forEach((rawTx) => {
       const tx = bitcoinjs.Transaction.fromHex(rawTx.data);
@@ -166,14 +165,14 @@ export class BitcoinWallet implements Wallet {
     psbt.finalizeAllInputs();
     const tx = psbt.extractTransaction();
 
-    return new SpendableTransaction(tx.getId(), tx.toHex());
+    return new RawTransaction(tx.getId(), tx.toHex());
   }
 
-  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
+  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
     throw new Error('Tokens are not supported by Bitcoin blockchain.');
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+  async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     await this.client.request({ method: "sendrawtransaction", params: [transaction.data, 0] });
   }
 }

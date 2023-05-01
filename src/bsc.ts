@@ -9,7 +9,6 @@ import {
   Transaction,
   RawTransaction,
   NetworkType,
-  SpendableTransaction,
   TokenTransaction,
   Mempool,
   Block,
@@ -60,15 +59,15 @@ export class BscWallet implements Wallet {
     return this.ethereumWallet.getTransaction(hash);
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction> {
     return this.ethereumWallet.createTransaction(from, to, value, spending);
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     return this.ethereumWallet.createTokenTransaction(contractAddress, from, to, value);
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+  async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     return this.ethereumWallet.broadcastTransaction(transaction);
   }
 }

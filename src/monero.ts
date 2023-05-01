@@ -8,7 +8,6 @@ import {
   RawTransaction,
   NetworkType,
   TransactionOutput,
-  SpendableTransaction,
   TransactionInput,
   Mempool,
   Block,
@@ -109,7 +108,7 @@ export class MoneroWallet implements Wallet {
     }
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<SpendableTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction> {
     const wallet = await this.createWalletFull();
     await wallet.scanTxs(spending.map((tx) => tx.hash));
     const syncRange = await wallet.getNumBlocksToUnlock();
@@ -121,14 +120,14 @@ export class MoneroWallet implements Wallet {
       subaddressIndex: from.index,
     });
     await wallet.close();
-    return new SpendableTransaction(tx.getHash(), tx.getMetadata());
+    return new RawTransaction(tx.getHash(), tx.getMetadata());
   }
 
-  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<SpendableTransaction> {
+  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
     throw new Error('Tokens are not supported by Monero blockchain.');
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+  async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     const wallet = await this.createWalletFull();
     wallet.relayTx(transaction.data);
     await wallet.close();

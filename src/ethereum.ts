@@ -8,7 +8,6 @@ import {
   Transaction,
   RawTransaction,
   NetworkType,
-  SpendableTransaction,
   TransactionInput,
   TransactionOutput,
   TokenTransaction,
@@ -94,15 +93,15 @@ export class EthereumWallet implements Wallet {
     return new TokenTransaction(tx.hash, JSON.stringify(tx), tx.from, to, tx.to!, value);
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<SpendableTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<RawTransaction> {
     const gasLimit = this.config.gasLimit ? this.web3.utils.toHex(this.config.gasLimit) : 21000;
     const gasPrice = this.config.gasPrice ? this.web3.utils.toHex(this.config.gasPrice) : undefined;
     const tx = { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, gasPrice };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
-    return new SpendableTransaction(signedTx.transactionHash, signedTx.rawTransaction);
+    return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const contractAbi = this.config.contracts?.[contractAddress];
     if (undefined === contractAbi) throw new Error(`ABI for contract ${contractAddress} is not available.`);
     const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
@@ -112,10 +111,10 @@ export class EthereumWallet implements Wallet {
     const gasPrice = this.config.gasPrice ? this.web3.utils.toHex(this.config.gasPrice) : undefined;
     const tx = { from: from.hash, to, value: '0x0', data, gasLimit, gasPrice };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
-    return new SpendableTransaction(signedTx.transactionHash, signedTx.rawTransaction);
+    return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+  async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     await this.web3.eth.sendSignedTransaction(transaction.data);
   }
 }

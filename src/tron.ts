@@ -8,7 +8,6 @@ import {
   NetworkType,
   Transaction,
   RawTransaction,
-  SpendableTransaction,
   TransactionInput,
   TransactionOutput,
   TokenTransaction,
@@ -116,21 +115,21 @@ export class TronWallet implements Wallet {
     return new TokenTransaction(tx.txID, tx.raw_data_hex, from, params[0].toString(), value.contract_address, params[1].toBigInt());
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<SpendableTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<RawTransaction> {
     const tx = await this.tronweb.transactionBuilder.sendTrx(to, value, from.hash);
     const signedTx = this.tronweb.trx.sign(tx, from.privateKey);
-    return new SpendableTransaction(signedTx.txID, JSON.stringify(signedTx));
+    return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<SpendableTransaction> {
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value }];
     const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, parameter, from);
     const signedTx = this.tronweb.trx.sign(tx, from.privateKey);
-    return new SpendableTransaction(signedTx.txID, JSON.stringify(signedTx));
+    return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
-  async broadcastTransaction(transaction: SpendableTransaction): Promise<void> {
+  async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
   }
 }
