@@ -15,11 +15,13 @@ import {
   Block,
 } from "./wallet.js";
 
+export type ContractAddress = string;
+
 export interface EthereumWalletConfig {
   provider: string,
   gasLimit?: number,
   gasPrice?: bigint,
-  contracts?: Record<string, ContractAbi>,
+  contracts?: Record<ContractAddress, ContractAbi>,
 }
 
 export class EthereumWallet implements Wallet {
