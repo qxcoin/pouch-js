@@ -4,7 +4,7 @@ import createKeccakHash from "keccak";
 import {
   Wallet,
   Address,
-  Transaction,
+  CoinTransaction,
   RawTransaction,
   NetworkType,
   TransactionOutput,
@@ -68,7 +68,7 @@ export class MoneroWallet implements Wallet {
     await wallet.sync(this.syncListener(wallet, toHeight), fromHeight);
     const txs = await wallet.getTxs({ minHeight: fromHeight, maxHeight: toHeight, isIncoming: true });
     await wallet.close();
-    const txMap = new Map<number, Transaction[]>();
+    const txMap = new Map<number, CoinTransaction[]>();
     for (const tx of txs) {
       const height = tx.getHeight();
       if (txMap.has(height)) txMap.get(height)!.push(this.convertTx(tx));
@@ -81,7 +81,7 @@ export class MoneroWallet implements Wallet {
     return blocks;
   }
 
-  async getTransaction(hash: string): Promise<Transaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction> {
     const wallet = await this.createWalletFull();
     await wallet.scanTxs([hash]);
     const tx = await wallet.getTx(hash);
@@ -89,7 +89,7 @@ export class MoneroWallet implements Wallet {
     return this.convertTx(tx);
   }
 
-  private convertTx(tx: any): Transaction {
+  private convertTx(tx: any): CoinTransaction {
     // it is not possible to read inputs from XMR blockchain, they are hidden
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];
@@ -97,7 +97,7 @@ export class MoneroWallet implements Wallet {
       if (t.isIncoming())
         outputs.push(new TransactionOutput(i, BigInt(t.getAmount().toString()), async () => t.getAddress()));
     });
-    return new Transaction(tx.getHash(), tx.getFullHex(), inputs, outputs);
+    return new CoinTransaction(tx.getHash(), tx.getFullHex(), inputs, outputs);
   }
 
   syncListener(wallet: any, to: number) {

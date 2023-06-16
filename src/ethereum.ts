@@ -5,7 +5,7 @@ import * as bip39 from 'bip39';
 import {
   Wallet,
   Address,
-  Transaction,
+  CoinTransaction,
   RawTransaction,
   NetworkType,
   TransactionInput,
@@ -60,9 +60,9 @@ export class EthereumWallet implements Wallet {
     return blocks;
   }
 
-  private async getBlockTransactions(height: number): Promise<Array<Transaction | TokenTransaction>> {
+  private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
     const block = await this.web3.eth.getBlock(height, true);
-    const transactions: Array<Transaction | TokenTransaction> = [];
+    const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of block.transactions) {
       const transaction = this.convertTx(tx);
       if (transaction) transactions.push(transaction);
@@ -70,7 +70,7 @@ export class EthereumWallet implements Wallet {
     return transactions;
   }
 
-  async getTransaction(hash: string): Promise<Transaction | TokenTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.web3.eth.getTransaction(hash);
     const transaction = this.convertTx(tx);
     if (!transaction)
@@ -78,11 +78,11 @@ export class EthereumWallet implements Wallet {
     return transaction;
   }
 
-  private convertTx(tx: any): Transaction | TokenTransaction | false {
+  private convertTx(tx: any): CoinTransaction | TokenTransaction | false {
     if ('0x' !== tx.input) return this.convertTokenTx(tx);
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => tx.from)];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, tx.value!, async () => tx.to!)];
-    return new Transaction(tx.hash, JSON.stringify(tx), inputs, outputs);
+    return new CoinTransaction(tx.hash, JSON.stringify(tx), inputs, outputs);
   }
 
   private convertTokenTx(tx: any): TokenTransaction | false {

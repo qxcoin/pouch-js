@@ -49,7 +49,7 @@ export class TransactionOutput {
   }
 }
 
-export class Transaction extends RawTransaction {
+export class CoinTransaction extends RawTransaction {
 
   constructor(
     public override readonly hash: string,
@@ -61,17 +61,17 @@ export class Transaction extends RawTransaction {
   }
 }
 
-export class TokenTransaction {
+export class TokenTransaction extends RawTransaction {
 
   constructor(
-    public readonly hash: string,
-    public readonly data: string,
+    public override readonly hash: string,
+    public override readonly data: string,
     public readonly from: string,
     public readonly to: string,
     public readonly contractAddress: string,
     public readonly value: bigint,
   ) {
-    // pass
+    super(hash, data);
   }
 }
 
@@ -88,7 +88,7 @@ export class Block {
 
   constructor(
     public readonly height: number,
-    public readonly transactions: Array<Transaction | TokenTransaction>,
+    public readonly transactions: Array<CoinTransaction | TokenTransaction>,
   ) {
     // pass
   }
@@ -99,7 +99,7 @@ export interface Wallet {
   getAddress(index: number, accountIndex: number): Promise<Address>;
   getMempool(): Promise<Mempool>;
   getBlocks(fromHeight: number, toHeight: number): Promise<Block[]>;
-  getTransaction(hash: string): Promise<Transaction | TokenTransaction>;
+  getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;

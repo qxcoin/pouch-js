@@ -6,7 +6,7 @@ import { ContractAddress, EthereumWallet } from "./ethereum.js";
 import {
   Wallet,
   Address,
-  Transaction,
+  CoinTransaction,
   RawTransaction,
   NetworkType,
   TokenTransaction,
@@ -55,7 +55,7 @@ export class BscWallet implements Wallet {
     return this.ethereumWallet.getBlocks(from, to);
   }
 
-  async getTransaction(hash: string): Promise<Transaction | TokenTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     return this.ethereumWallet.getTransaction(hash);
   }
 

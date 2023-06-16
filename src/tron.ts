@@ -6,7 +6,7 @@ import {
   Wallet,
   Address,
   NetworkType,
-  Transaction,
+  CoinTransaction,
   RawTransaction,
   TransactionInput,
   TransactionOutput,
@@ -67,7 +67,7 @@ export class TronWallet implements Wallet {
 
   private convertBlock(block: any): Block {
     const height: number = block['block_header']['raw_data']['number'];
-    const transactions: Array<Transaction | TokenTransaction> = [];
+    const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of (block.transactions ?? [])) {
       const transaction = this.convertTx(tx);
       if (transaction) transactions.push(transaction);
@@ -75,9 +75,9 @@ export class TronWallet implements Wallet {
     return new Block(height, transactions);
   }
 
-  private async getBlockTransactions(height: number): Promise<Array<Transaction | TokenTransaction>> {
+  private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
     const block = await this.tronweb.trx.getBlock(height);
-    const transactions: Array<Transaction | TokenTransaction> = [];
+    const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of block.transactions) {
       const transaction = this.convertTx(tx);
       if (transaction) transactions.push(transaction);
@@ -85,7 +85,7 @@ export class TronWallet implements Wallet {
     return transactions;
   }
 
-  async getTransaction(hash: string): Promise<Transaction | TokenTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
     if (!transaction) {
@@ -94,14 +94,14 @@ export class TronWallet implements Wallet {
     return transaction;
   }
 
-  private convertTx(tx: any): Transaction | TokenTransaction | false {
+  private convertTx(tx: any): CoinTransaction | TokenTransaction | false {
     const contract = tx.raw_data.contract[0];
     if (contract.type === 'TriggerSmartContract') return this.convertTokenTx(tx);
     else if (contract.type !== 'TransferContract') return false;
     const value = contract.parameter.value;
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.owner_address))];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, value.amount, async () => this.encodeAddress(value.to_address))];
-    return new Transaction(tx.txID, tx.raw_data_hex, inputs, outputs);
+    return new CoinTransaction(tx.txID, tx.raw_data_hex, inputs, outputs);
   }
 
   private convertTokenTx(tx: any): TokenTransaction | false {

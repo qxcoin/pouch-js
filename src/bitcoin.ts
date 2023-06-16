@@ -10,8 +10,8 @@ import {
   Address,
   TransactionInput,
   TransactionOutput,
-  Transaction,
   RawTransaction,
+  CoinTransaction,
   NetworkType,
   Mempool,
   Block,
@@ -64,23 +64,23 @@ export class BitcoinWallet implements Wallet {
     return blocks;
   }
 
-  private async getBlockTransactions(height: number): Promise<Array<Transaction>> {
+  private async getBlockTransactions(height: number): Promise<Array<CoinTransaction>> {
     const blockHash = await this.client.request({ method: "getblockhash", params: [height] });
     const result = await this.client.request({ method: "getblock", params: [blockHash, 2] });
-    const transactions: Transaction[] = [];
+    const transactions: CoinTransaction[] = [];
     result.tx.forEach((tx: any) => {
       transactions.push(this.convertTx(bitcoinjs.Transaction.fromHex(tx.hex)));
     });
     return transactions;
   }
 
-  async getTransaction(hash: string): Promise<Transaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction> {
     const result = await this.client.request({ method: "getrawtransaction", params: [hash, true] });
     const tx = bitcoinjs.Transaction.fromHex(result['hex']);
     return this.convertTx(tx);
   }
 
-  private convertTx(tx: bitcoinjs.Transaction): Transaction {
+  private convertTx(tx: bitcoinjs.Transaction): CoinTransaction {
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];
     tx.ins.forEach((inp, i) => {
@@ -89,7 +89,7 @@ export class BitcoinWallet implements Wallet {
     tx.outs.forEach((out, i) => {
       outputs.push(new TransactionOutput(i, BigInt(out.value), async () => this.extractAddressFromOutput(out)));
     });
-    return new Transaction(tx.getId(), tx.toHex(), inputs, outputs);
+    return new CoinTransaction(tx.getId(), tx.toHex(), inputs, outputs);
   }
 
   private async extractAddressFromInput(inp: bitcoinjs.TxInput): Promise<string> {
