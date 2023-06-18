@@ -14,6 +14,7 @@ import {
   Block,
   Mempool,
 } from "./wallet.js";
+import { UnsupportedTransactionError } from "./errors.js";
 
 export interface TronWalletConfig {
   provider: string,
@@ -79,8 +80,7 @@ export class TronWallet implements Wallet {
     const block = await this.tronweb.trx.getBlock(height);
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of block.transactions) {
-      const transaction = this.convertTx(tx);
-      if (transaction) transactions.push(transaction);
+      try { transactions.push(this.convertTx(tx)) } catch {}
     }
     return transactions;
   }
@@ -88,28 +88,30 @@ export class TronWallet implements Wallet {
   async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
-    if (!transaction) {
-      throw new Error(`Failed to convert transaction ${tx.txID}.`);
-    }
     return transaction;
   }
 
-  private convertTx(tx: any): CoinTransaction | TokenTransaction | false {
+  private convertTx(tx: any): CoinTransaction | TokenTransaction {
     const contract = tx.raw_data.contract[0];
-    if (contract.type === 'TriggerSmartContract') return this.convertTokenTx(tx);
-    else if (contract.type !== 'TransferContract') return false;
+    if (contract.type === 'TriggerSmartContract') {
+      return this.convertTokenTx(tx);
+    } else if (contract.type !== 'TransferContract') {
+      throw new UnsupportedTransactionError(`Transaction [${tx.txID}] is not supported.`);
+    }
     const value = contract.parameter.value;
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.owner_address))];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, value.amount, async () => this.encodeAddress(value.to_address))];
     return new CoinTransaction(tx.txID, tx.raw_data_hex, inputs, outputs);
   }
 
-  private convertTokenTx(tx: any): TokenTransaction | false {
+  private convertTokenTx(tx: any): TokenTransaction {
     const contract = tx.raw_data.contract[0];
     const value = contract.parameter.value;
     const method = value.data.slice(8);
     // we only support transfer (a9059cbb) method for now
-    if (method !== 'a9059cbb') return false;
+    if (method !== 'a9059cbb') {
+      throw new UnsupportedTransactionError(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
+    }
     const from = this.encodeAddress(value.owner_address);
     const params = TronWeb.utils.abi.decodeParams(["address", "uint256"], value.data, true);
     return new TokenTransaction(tx.txID, tx.raw_data_hex, from, params[0].toString(), value.contract_address, params[1].toBigInt());

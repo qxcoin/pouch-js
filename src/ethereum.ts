@@ -14,6 +14,7 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
+import { PouchError, UnsupportedTransactionError } from "./errors.js";
 
 export type ContractAddress = string;
 
@@ -64,8 +65,7 @@ export class EthereumWallet implements Wallet {
     const block = await this.web3.eth.getBlock(height, true);
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of block.transactions) {
-      const transaction = this.convertTx(tx);
-      if (transaction) transactions.push(transaction);
+      try { transactions.push(this.convertTx(tx)) } catch {}
     }
     return transactions;
   }
@@ -73,22 +73,22 @@ export class EthereumWallet implements Wallet {
   async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.web3.eth.getTransaction(hash);
     const transaction = this.convertTx(tx);
-    if (!transaction)
-      throw new Error(`Failed to convert transaction ${tx.hash}.`);
     return transaction;
   }
 
-  private convertTx(tx: any): CoinTransaction | TokenTransaction | false {
+  private convertTx(tx: any): CoinTransaction | TokenTransaction {
     if ('0x' !== tx.input) return this.convertTokenTx(tx);
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => tx.from)];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, tx.value!, async () => tx.to!)];
     return new CoinTransaction(tx.hash, JSON.stringify(tx), inputs, outputs);
   }
 
-  private convertTokenTx(tx: any): TokenTransaction | false {
+  private convertTokenTx(tx: any): TokenTransaction {
     const method = tx.input!.slice(2, 10);
     // we only support transfer (a9059cbb) method for now
-    if (method !== 'a9059cbb') return false;
+    if (method !== 'a9059cbb') {
+      throw new UnsupportedTransactionError(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
+    }
     const params = this.web3.eth.abi.decodeParameters(['address', 'uint256'], tx.input!.slice(10));
     const to = params[0] as string;
     const value = params[1] as bigint;
@@ -105,7 +105,9 @@ export class EthereumWallet implements Wallet {
 
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const contractAbi = this.config.contracts?.[contractAddress];
-    if (undefined === contractAbi) throw new Error(`ABI for contract ${contractAddress} is not available.`);
+    if (undefined === contractAbi) {
+      throw new PouchError(`ABI for contract [${contractAddress}] is not available.`);
+    }
     const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
     // @ts-ignore because we can't have type safety from dynamic ABI
     const data = contract.methods['transfer'](to, value).encodeABI();

@@ -3,6 +3,7 @@ import { MoneroWallet, MoneroWalletConfig } from "./monero.js";
 import { EthereumWallet, EthereumWalletConfig } from "./ethereum.js";
 import { TronWallet, TronWalletConfig } from "./tron.js";
 import { BscWallet, BscWalletConfig } from "./bsc.js";
+import { PouchError } from "./errors.js";
 
 export type NetworkType = "mainnet" | "testnet";
 
@@ -134,7 +135,7 @@ export class WalletFactory {
       case 'bsc':
         return this.createBscWallet();
       default:
-        throw new Error(`Wallet [${type}] is not supported.`);
+        throw new PouchError(`Wallet [${type}] is not supported.`);
     }
   }
 
