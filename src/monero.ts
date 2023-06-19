@@ -12,7 +12,6 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
-import { UnimplementedMethodError } from "./errors.js";
 
 export interface MoneroWalletConfig {
   server: string,
@@ -125,7 +124,7 @@ export class MoneroWallet implements Wallet {
   }
 
   createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
-    throw new UnimplementedMethodError('Tokens are not supported by Monero blockchain.');
+    throw new Error('Tokens are not supported by Monero blockchain.');
   }
 
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {

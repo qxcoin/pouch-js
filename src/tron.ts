@@ -14,7 +14,6 @@ import {
   Block,
   Mempool,
 } from "./wallet.js";
-import { UnsupportedTransactionError } from "./errors.js";
 
 export interface TronWalletConfig {
   provider: string,
@@ -96,7 +95,7 @@ export class TronWallet implements Wallet {
     if (contract.type === 'TriggerSmartContract') {
       return this.convertTokenTx(tx);
     } else if (contract.type !== 'TransferContract') {
-      throw new UnsupportedTransactionError(`Transaction [${tx.txID}] is not supported.`);
+      throw new Error(`Transaction [${tx.txID}] is not supported.`);
     }
     const value = contract.parameter.value;
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.owner_address))];
@@ -110,7 +109,7 @@ export class TronWallet implements Wallet {
     const method = value.data.slice(8);
     // we only support transfer (a9059cbb) method for now
     if (method !== 'a9059cbb') {
-      throw new UnsupportedTransactionError(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
+      throw new Error(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
     }
     const from = this.encodeAddress(value.owner_address);
     const params = TronWeb.utils.abi.decodeParams(["address", "uint256"], value.data, true);

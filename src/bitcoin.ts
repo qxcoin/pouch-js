@@ -16,7 +16,6 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
-import { InsufficientBalanceError, UnimplementedMethodError, UnsupportedTransactionError } from "./errors.js";
 
 export interface BitcoinWalletConfig {
   rpcServer: string,
@@ -124,7 +123,7 @@ export class BitcoinWallet implements Wallet {
     if (out.script.length) {
       return out.script.toString('hex');
     } else {
-      throw new UnsupportedTransactionError('Failed to extract address from output.');
+      throw new Error('Failed to extract address from output.');
     }
   }
 
@@ -150,7 +149,7 @@ export class BitcoinWallet implements Wallet {
       return totalAvailableValue >= totalRequiredValue ? false : undefined;
     });
     if (totalAvailableValue < totalRequiredValue) {
-      throw new InsufficientBalanceError('Not enough balance.');
+      throw new Error('Not enough balance.');
     }
 
     const psbt = new bitcoinjs.Psbt({ network: this.network });
@@ -170,7 +169,7 @@ export class BitcoinWallet implements Wallet {
   }
 
   createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
-    throw new UnimplementedMethodError('Tokens are not supported by Bitcoin blockchain.');
+    throw new Error('Tokens are not supported by Bitcoin blockchain.');
   }
 
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {

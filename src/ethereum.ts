@@ -14,7 +14,6 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
-import { PouchError, UnsupportedTransactionError } from "./errors.js";
 
 export type ContractAddress = string;
 
@@ -87,7 +86,7 @@ export class EthereumWallet implements Wallet {
     const method = tx.input!.slice(2, 10);
     // we only support transfer (a9059cbb) method for now
     if (method !== 'a9059cbb') {
-      throw new UnsupportedTransactionError(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
+      throw new Error(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
     }
     const params = this.web3.eth.abi.decodeParameters(['address', 'uint256'], tx.input!.slice(10));
     const to = params[0] as string;
@@ -106,7 +105,7 @@ export class EthereumWallet implements Wallet {
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const contractAbi = this.config.contracts?.[contractAddress];
     if (undefined === contractAbi) {
-      throw new PouchError(`ABI for contract [${contractAddress}] is not available.`);
+      throw new Error(`ABI for contract [${contractAddress}] is not available.`);
     }
     const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
     // @ts-ignore because we can't have type safety from dynamic ABI
