@@ -110,7 +110,7 @@ export class EthereumWallet implements Wallet {
     const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
     // @ts-ignore because we can't have type safety from dynamic ABI
     const data = contract.methods['transfer'](to, value).encodeABI();
-    const gasLimit = this.config.gasLimit ? this.web3.utils.toHex(this.config.gasLimit) : 500000;
+    const gasLimit = this.config.gasLimit ? this.web3.utils.toHex(this.config.gasLimit) : 500_000;
     const gasPrice = this.config.gasPrice ? this.web3.utils.toHex(this.config.gasPrice) : undefined;
     const tx = { from: from.hash, to, value: '0x0', data, gasLimit, gasPrice };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);

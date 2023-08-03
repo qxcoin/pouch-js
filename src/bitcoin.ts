@@ -46,7 +46,7 @@ export class BitcoinWallet implements Wallet {
   }
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
-    const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/0'").deriveHardened(accountIndex).derive(0).derive(index);
+    const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/84'/0'").deriveHardened(accountIndex).derive(0).derive(index);
     const p = bitcoinjs.payments.p2wpkh({ network: this.network, pubkey: node.publicKey });
     return new Address(index, accountIndex, p.address!, node.privateKey!);
   }

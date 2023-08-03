@@ -10,12 +10,12 @@ test('can retrieve block height', async () => {
   expect(typeof height).toBe('number');
 });
 
-// see: https://github.com/libbitcoin/libbitcoin-system/wiki/Altcoin-Version-Mappings#7-bitcoin-btc-bip-3944-technology-examples
+// create a native-segwit wallet in electrum to check this
 test('can create valid address', async () => {
   const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { rpcServer: 'http://example.com', fee: 0n });
   const addr = await wallet.getAddress(0, 0);
-  expect(wif.encode(128, addr.privateKey, true)).toBe('KxdnUF9EAinLC6KWSrEZdQvdkT3XSbvDHzxANB1qKrpPjxSK2TFC');
-  expect(addr.hash).toBe('bc1qaqn2muzgsle78cknhz6qluf9j6uqkvqa6r003g');
+  expect(wif.encode(128, addr.privateKey, true)).toBe('KzzbWJFNFvdv2UqzvTvDkeT9ySnaY1E4FnuifwPYMbTwJhFXF9By');
+  expect(addr.hash).toBe('bc1qc5semafyf4zxfvul968ldfqmxrxynnyta5vhhg');
 });
 
 test('can create transaction for P2PKH', async () => {
