@@ -48,7 +48,9 @@ export class MoneroWallet implements Wallet {
 
   async getLastBlockHeight(): Promise<number> {
     const wallet = await this.createWalletFull();
-    return await wallet.getDaemonHeight();
+    const height = await wallet.getDaemonHeight();
+    await wallet.close();
+    return height;
   }
 
   async getAddress(index: number, accountIndex: number = 0): Promise<Address> {
