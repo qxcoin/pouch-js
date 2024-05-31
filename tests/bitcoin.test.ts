@@ -2,24 +2,32 @@ import wif from 'wif';
 import { Address, RawTransaction } from '../src/wallet';
 import { BitcoinWallet } from '../src/bitcoin';
 
+function createWallet(network: 'mainnet' | 'testnet') {
+  const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
+  return new BitcoinWallet(mnemonic, network, {
+    rpcServer: 'testnet' === network ? 'https://go.getblock.io/204e9839582942599ea222a86f6f937d' : 'https://go.getblock.io/139892f83b72409bb850d16de30d51d7',
+    fee: BigInt(0.001 * 100000000),
+  });
+}
+
 jest.setTimeout(240000);
 
 test('can retrieve block height', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const height = await wallet.getLastBlockHeight();
   expect(typeof height).toBe('number');
 });
 
 // create a native-segwit wallet in electrum to check this
 test('can create valid address', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { rpcServer: 'http://example.com', fee: 0n });
+  const wallet = createWallet('mainnet');
   const addr = await wallet.getAddress(0, 0);
   expect(wif.encode(128, addr.privateKey, true)).toBe('KzzbWJFNFvdv2UqzvTvDkeT9ySnaY1E4FnuifwPYMbTwJhFXF9By');
   expect(addr.hash).toBe('bc1qc5semafyf4zxfvul968ldfqmxrxynnyta5vhhg');
 });
 
 test('can create transaction for P2PKH', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'http://example.com', fee: BigInt(0.001 * 100000000) });
+  const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
   const spending = [new RawTransaction('940117f6669da0c9855b435d52c20b02117dc21290af4dd7df9bf381b2c6a2cc', '020000000001012beeeacb02a43ea4dc9c08c3c9701143fa59364bfcdb158b30fa8b0941dbb4b90100000000feffffff027cc2a5910100000016001434f54c5712a20f91f6995d5a014d5112d30eaa130823160000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d024730440220712dba203a2185f7f59b2f7c3a2cf9ef0163821f05faa649701055382f1bc28902204a0aed4dde6f381a627711a94f6bad9ef73ad54b684fe7cabdab33980f9291a701210363d67b1556d9117a515f1a7b4afbafe3b658537c2079bef615d612e2042df5d04b0b2500')];
   const rawTx = await wallet.createTransaction(from, 'n2gTQ45JG7RzfjafW4MVvh7EseVX5VGHTs', BigInt(0.002 * 100000000), spending);
@@ -28,7 +36,7 @@ test('can create transaction for P2PKH', async () => {
 });
 
 test('can create transaction for P2WPKH', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'http://example.com', fee: BigInt(0.001 * 100000000) });
+  const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
   const spending = [new RawTransaction('940117f6669da0c9855b435d52c20b02117dc21290af4dd7df9bf381b2c6a2cc', '020000000001012beeeacb02a43ea4dc9c08c3c9701143fa59364bfcdb158b30fa8b0941dbb4b90100000000feffffff027cc2a5910100000016001434f54c5712a20f91f6995d5a014d5112d30eaa130823160000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d024730440220712dba203a2185f7f59b2f7c3a2cf9ef0163821f05faa649701055382f1bc28902204a0aed4dde6f381a627711a94f6bad9ef73ad54b684fe7cabdab33980f9291a701210363d67b1556d9117a515f1a7b4afbafe3b658537c2079bef615d612e2042df5d04b0b2500')];
   const rawTx = await wallet.createTransaction(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', BigInt(0.002 * 100000000), spending);
@@ -38,14 +46,14 @@ test('can create transaction for P2WPKH', async () => {
 
 // test using Pizza Transaction
 test('can retrieve P2PKH transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/mainnet/', fee: 0n });
+  const wallet = createWallet('mainnet');
   const tx = await wallet.getTransaction('a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d');
   expect(await tx.inputs[0]?.address()).toBe('1XPTgDRhN8RFnzniWCddobD9iKZatrvH4');
   expect(await tx.outputs[0]?.address()).toBe('17SkEw2md5avVNyYgj6RiXuQKNwkXaxFyQ');
 });
 
 test('can retrieve P2WPKH transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('580cc9ad94042394cbbe31b58fb63ae1b0e60a433fd7c9679d87f91cdee34201');
   expect(await tx.inputs[0]?.address()).toBe('tb1q568fk0pmj9x044a9tqczr6a50xy2ze74qrsvl4');
   expect(await tx.outputs[0]?.address()).toBe('tb1q00ug85flspuk9ld9yflpxgave5dlxqt8t254rl');
@@ -56,7 +64,7 @@ test('can retrieve P2WPKH transaction', async () => {
 
 // The first transaction that has spent funds from P2WSH
 test('can retrieve P2WSH transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'mainnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/mainnet/', fee: 0n });
+  const wallet = createWallet('mainnet');
   const tx = await wallet.getTransaction('cab75da6d7fe1531c881d4efdb4826410a2604aa9e6442ab12a08363f34fb408');
   expect(await tx.inputs[0]?.address()).toBe('bc1qj9hlju59t0m4389033r2x8mlxwc86qgqm9flm626sd22cdhfs9jsyrrp6q');
   expect(await tx.outputs[0]?.address()).toBe('bc1qt4hs9aracmzhpy7ly3hrwsk0u83z4dqsln4vg5');
@@ -64,7 +72,7 @@ test('can retrieve P2WSH transaction', async () => {
 });
 
 test('can retrieve P2WPKH-P2SH transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('678893a63f6c0084964272035d3b23cc3914a294601862177f301f0086b27d56');
   expect(await tx.inputs[0]?.address()).toBe('2NC9aEw5DZwaXGntkv8PXSv2f7eaGpHBRqD');
   expect(await tx.inputs[1]?.address()).toBe('2NDHWpQNCLo2yTwmyVkvMHgtby9pdoyGAP4');
@@ -75,7 +83,7 @@ test('can retrieve P2WPKH-P2SH transaction', async () => {
 });
 
 test('can retrieve P2WSH-P2SH transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('74ca72c306816cd942b5b042378478a109989bf46b269e0be9e79736e21e7016');
   expect(await tx.inputs[0]?.address()).toBe('2MsyRCfhKxomefD7XWMTpZ9pq21zE19TxXd');
   expect(await tx.outputs[0]?.address()).toBe('2Mt1ZouaHFSyoPy7t9u5ZiFqDLKWv7t88Wh');
@@ -86,7 +94,7 @@ test('can retrieve P2WSH-P2SH transaction', async () => {
 
 // test using the first transaction of testnet network
 test('can retrieve P2PK transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
   expect(await tx.inputs[0]?.address()).toBe('Block Reward');
   expect(await tx.outputs[0]?.address()).toBe('n3GNqMveyvaPvUbH469vDRadqpJMPc84JA');
@@ -94,7 +102,7 @@ test('can retrieve P2PK transaction', async () => {
 });
 
 test('can retrieve P2TR transaction', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('228def0c3f8b4f1898cb7f442e356ed8755383745a682750102753c32072a9db');
   expect(await tx.inputs[0]?.address()).toBe('tb1p86u6c9u0p9ez08clh9aw9shxqqaeh35dj5thg20u9mx5ytplpxqsxp802z');
   expect(await tx.inputs[1]?.address()).toBe('tb1pmvgk75p2l29vckjt9sslu0m95vpvj8zylee2k9y8eg76uazu4neqz3vnd7');
@@ -104,14 +112,14 @@ test('can retrieve P2TR transaction', async () => {
 
 // test using the first transaction of testnet network
 test('can handle Block Reward as input', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const tx = await wallet.getTransaction('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
   expect(await tx.inputs[0]?.address()).toBe('Block Reward');
 });
 
 // test using the first and second block of testnet network
 test('can retrieve transactions of a block range', async () => {
-  const wallet = new BitcoinWallet('radar blur cabbage chef fix engine embark joy scheme fiction master release', 'testnet', { rpcServer: 'https://btc.getblock.io/71bdf852-94b3-4bd2-85d8-74d085ec5c56/testnet/', fee: 0n });
+  const wallet = createWallet('testnet');
   const blocks = await wallet.getBlocks(1, 2);
   expect(blocks[0]?.transactions[0]?.hash).toBe('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
   expect(blocks[1]?.transactions[0]?.hash).toBe('20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2');

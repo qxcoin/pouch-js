@@ -33,6 +33,7 @@ export class MoneroWallet implements Wallet {
     return await monerojs.createWalletKeys({
       networkType: this.networkType,
       privateSpendKey: this.privateSpendKey,
+      proxyToWorker: false,
     });
   }
 
