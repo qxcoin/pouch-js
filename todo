@@ -1,4 +1,3 @@
 - [] use node:test
 - [] tests shouldn't use IO connections, unless it is really required
 - [] update monero-javascript to monero-ts
-- [] can we find a way for ETH to download contract abi without the need to store them.
