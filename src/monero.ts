@@ -100,7 +100,9 @@ export class MoneroWallet implements Wallet {
       if (t.isIncoming())
         outputs.push(new TransactionOutput(i, BigInt(t.getAmount().toString()), async () => t.getAddress()));
     });
-    return new CoinTransaction(tx.getHash(), tx.getFullHex(), inputs, outputs);
+    // NOTE: it seems `getFullHex` is undefined.
+    // see: https://github.com/woodser/monero-ts/issues/214
+    return new CoinTransaction(tx.getHash(), tx.getFullHex() ?? '', inputs, outputs);
   }
 
   syncListener(wallet: any, to: number) {
