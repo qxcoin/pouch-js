@@ -17,12 +17,12 @@ test('can retrieve block height', async () => {
   expect(typeof height).toBe('number');
 });
 
-see: https://github.com/libbitcoin/libbitcoin-system/wiki/Altcoin-Version-Mappings#11-ethereum-eth-bip-3944-technology-examples
+// see: https://github.com/libbitcoin/libbitcoin-system/wiki/Altcoin-Version-Mappings#11-ethereum-eth-bip-3944-technology-examples
 test('can create valid address', async () => {
   const wallet = createWallet('testnet');
   const addr = await wallet.getAddress(0, 0);
   expect(addr.privateKey.toString('hex')).toBe('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18');
-  expect(addr.hash).toBe('0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9');
+  expect(addr.hash).toBe('0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9');
 });
 
 // test using famous 15k ETH transaction

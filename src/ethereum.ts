@@ -46,7 +46,9 @@ export class EthereumWallet implements Wallet {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/60'").deriveHardened(accountIndex).derive(0).derive(index);
     if (undefined === node.privateKey) throw new Error("Private key doesn't exist on derived BIP32 node.");
     const acc = this.web3.eth.accounts.privateKeyToAccount(node.privateKey);
-    return new Address(index, accountIndex, acc.address, node.privateKey);
+    // we should lowercase the address, because it will be lowercased on transactions
+    // hex strings are case-insensitive
+    return new Address(index, accountIndex, acc.address.toLowerCase(), node.privateKey);
   }
 
   async getMempool(): Promise<Mempool> {
