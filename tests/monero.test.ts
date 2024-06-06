@@ -1,5 +1,6 @@
 import { Address, RawTransaction } from '../src/wallet';
 import { MoneroWallet } from '../src/monero';
+import { expect, test, vi } from 'vitest';
 
 function createWallet(network: 'testnet' | 'mainnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
@@ -8,7 +9,7 @@ function createWallet(network: 'testnet' | 'mainnet') {
   });
 }
 
-jest.setTimeout(240000);
+vi.setConfig({ testTimeout: 240000 });
 
 test('can retrieve block height', async () => {
   const wallet = createWallet('testnet');

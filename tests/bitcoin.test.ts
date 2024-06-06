@@ -1,6 +1,7 @@
 import wif from 'wif';
 import { Address, RawTransaction } from '../src/wallet';
 import { BitcoinWallet } from '../src/bitcoin';
+import { expect, test, vi } from 'vitest';
 
 function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
@@ -10,7 +11,7 @@ function createWallet(network: 'mainnet' | 'testnet') {
   });
 }
 
-jest.setTimeout(240000);
+vi.setConfig({ testTimeout: 240000 });
 
 test('can retrieve block height', async () => {
   const wallet = createWallet('testnet');

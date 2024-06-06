@@ -1,5 +1,6 @@
 import { TronWallet } from '../src/tron';
 import { Address, CoinTransaction, TokenTransaction } from '../src/wallet';
+import { expect, test, vi } from 'vitest';
 
 function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
@@ -9,7 +10,7 @@ function createWallet(network: 'mainnet' | 'testnet') {
   });
 }
 
-jest.setTimeout(240000);
+vi.setConfig({ testTimeout: 240000 });
 
 test('can retrieve block height', async () => {
   const wallet = createWallet('testnet');
@@ -73,4 +74,11 @@ test('can retrieve transactions of a block range', async () => {
   const blocks = await wallet.getBlocks(33274568, 33274569);
   expect(blocks[0]?.transactions[0]?.hash).toBe('dbdc18bbac50844aaae4ddf5d99137ecac961565de86792c163b64a259b08f4b');
   expect(blocks[1]?.transactions[0]?.hash).toBe('dcd3affa8faec2a277500e000887e624f433c98b9f98aa24c37e8117223a14c4');
+});
+
+test('can retrieve transactions of a block range larger than 100', async () => {
+  const wallet = createWallet('testnet');
+  const blocks = await wallet.getBlocks(1, 145);
+  expect(blocks[0]?.height).toBe(1);
+  expect(blocks[144]?.height).toBe(145);
 });

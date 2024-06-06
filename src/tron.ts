@@ -73,7 +73,13 @@ export class TronWallet implements Wallet {
 
   async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
     if (fromHeight === toHeight) return [new Block(fromHeight, await this.getBlockTransactions(fromHeight))];
-    const blocks = await this.tronweb.trx.getBlockRange(fromHeight, toHeight);
+    // NOTE: getBlockRange only allows range of 100 blocks
+    const blocks = [];
+    for (let i = fromHeight; i <= toHeight; i = i + 100) {
+      const from = i;
+      const to = Math.min(i + 99, toHeight);
+      blocks.push(...await this.tronweb.trx.getBlockRange(from, to));
+    }
     return blocks.map((block) => {
       return this.convertBlock(block);
     });
@@ -83,8 +89,7 @@ export class TronWallet implements Wallet {
     const height: number = block['block_header']['raw_data']['number'];
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of (block.transactions ?? [])) {
-      const transaction = this.convertTx(tx);
-      if (transaction) transactions.push(transaction);
+      try { transactions.push(this.convertTx(tx)) } catch {}
     }
     return new Block(height, transactions);
   }
