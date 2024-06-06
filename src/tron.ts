@@ -1,4 +1,4 @@
-import { TronWeb, utils as TronWebUtils } from "tronweb";
+import { TronWeb, utils as tronUtils, providers as tronProviders } from "tronweb";
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
@@ -37,19 +37,22 @@ export class TronWallet implements Wallet {
   constructor(mnemonic: string, _networkType: NetworkType, config: TronWalletConfig) {
     this.mnemonic = mnemonic;
     this.config = config;
-    this.tronweb = new TronWeb({ fullHost: this.config.provider, headers: new AxiosHeaders(config.headers) });
     this.bip32 = BIP32Factory(ecc);
+    this.tronweb = new TronWeb({
+      fullHost: new tronProviders.HttpProvider(this.config.provider, 16000),
+      headers: new AxiosHeaders(config.headers),
+    });
   }
 
   private encodeAddress(address: string): string {
-    const addressBytes = TronWebUtils.code.hexStr2byteArray(address);
-    return TronWebUtils.crypto.getBase58CheckAddress(addressBytes);
+    const addressBytes = tronUtils.code.hexStr2byteArray(address);
+    return tronUtils.crypto.getBase58CheckAddress(addressBytes);
   }
 
   private decodeAddress(address: string): string {
-    const addressBytes = TronWebUtils.crypto.decodeBase58Address(address);
+    const addressBytes = tronUtils.crypto.decodeBase58Address(address);
     if (false === addressBytes) throw new Error('Failed to decode address.');
-    return TronWebUtils.code.byteArray2hexStr(addressBytes);
+    return tronUtils.code.byteArray2hexStr(addressBytes);
   }
 
   async getLastBlockHeight(): Promise<number> {
@@ -61,9 +64,9 @@ export class TronWallet implements Wallet {
     const seed = bip39.mnemonicToSeedSync(this.mnemonic);
     const node = this.bip32.fromSeed(seed).derivePath("m/44'/195'").deriveHardened(accountIndex).derive(0).derive(index);
     if (undefined === node.privateKey) throw new Error("Private key doesn't exist on derived BIP32 node.");
-    const privateKeyBytes = TronWebUtils.code.hexStr2byteArray(node.privateKey.toString('hex'));
-    const addressBytes = TronWebUtils.crypto.getAddressFromPriKey(privateKeyBytes);
-    const acc = TronWebUtils.crypto.getBase58CheckAddress(addressBytes);
+    const privateKeyBytes = tronUtils.code.hexStr2byteArray(node.privateKey.toString('hex'));
+    const addressBytes = tronUtils.crypto.getAddressFromPriKey(privateKeyBytes);
+    const acc = tronUtils.crypto.getBase58CheckAddress(addressBytes);
     return new Address(index, accountIndex, acc, node.privateKey!);
   }
 
@@ -153,7 +156,7 @@ export class TronWallet implements Wallet {
     if (method !== 'a9059cbb') {
       throw new Error(`Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
     }
-    const params = TronWebUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
+    const params = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
     const from = this.encodeAddress(value.owner_address);
     const to = this.encodeAddress(params[0].toString());
     const contractAddress = this.encodeAddress(value.contract_address);
