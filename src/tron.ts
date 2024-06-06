@@ -88,6 +88,8 @@ export class TronWallet implements Wallet {
   private convertBlock(block: TronBlock): Block {
     const height: number = block['block_header']['raw_data']['number'];
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
+    // NOTE: for empty blocks, `block.transaction` is not present
+    // see: https://github.com/tronprotocol/tronweb/issues/522
     for (const tx of (block.transactions ?? [])) {
       try { transactions.push(this.convertTx(tx)) } catch {}
     }
@@ -97,7 +99,9 @@ export class TronWallet implements Wallet {
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
     const block = await this.tronweb.trx.getBlock(height);
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
-    for (const tx of block.transactions) {
+    // NOTE: for empty blocks, `block.transaction` is not present
+    // see: https://github.com/tronprotocol/tronweb/issues/522
+    for (const tx of (block.transactions ?? [])) {
       try { transactions.push(this.convertTx(tx)) } catch {}
     }
     return transactions;

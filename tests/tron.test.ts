@@ -69,6 +69,12 @@ test('can retrieve transactions of a block', async () => {
   expect(blocks[0]?.transactions[0]?.hash).toBe('3970ee4f246e6dc880e21ee0a6929311a00608a9fd44d5ac11466e3de32f49b1');
 });
 
+test('can retrieve transactions of an empty block', async () => {
+  const wallet = createWallet('testnet');
+  const blocks = await wallet.getBlocks(44711520, 44711520);
+  expect(blocks[0]?.transactions).toStrictEqual([]);
+});
+
 test('can retrieve transactions of a block range', async () => {
   const wallet = createWallet('testnet');
   const blocks = await wallet.getBlocks(33274568, 33274569);
