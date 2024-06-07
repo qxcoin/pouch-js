@@ -63,6 +63,12 @@ test('can create a token transaction', async () => {
   expect(rawTx.data).toBeDefined();
 });
 
+test('can retrieve transactions of an empty block', async () => {
+  const wallet = createWallet('testnet');
+  const blocks = await wallet.getBlocks(6058307, 6058307);
+  expect(blocks[0]?.transactions).toStrictEqual([]);
+});
+
 test('can retrieve transactions of a block range', async () => {
   const wallet = createWallet('mainnet');
   const blocks = await wallet.getBlocks(19981132, 19981133);

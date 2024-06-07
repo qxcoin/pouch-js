@@ -66,7 +66,9 @@ export class EthereumWallet implements Wallet {
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
     const block = await this.web3.eth.getBlock(height, true, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
-    for (const tx of block.transactions) {
+    // NOTE: for empty blocks, `block.transaction` is not present
+    // see: https://github.com/tronprotocol/tronweb/issues/522
+    for (const tx of (block.transactions ?? [])) {
       if (typeof tx === 'string') continue; // `getBlock` can return both `string` and `TransactionInfo`, we only want `TransactionInfo`
       try { transactions.push(this.convertTx(tx)) } catch {}
     }
@@ -124,7 +126,7 @@ export class EthereumWallet implements Wallet {
       throw new Error('Failed to retrieve base fee.');
     }
     const maxFeePerGas = baseFee * 2n;
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000; // default to 1 gwei
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 100_000;
     const gasLimit = 21_000;
     const tx = { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
@@ -143,7 +145,7 @@ export class EthereumWallet implements Wallet {
       throw new Error('Failed to retrieve base fee.');
     }
     const maxFeePerGas = baseFee * 2n;
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000; // default to 1 gwei
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 100_000;
     const gasLimit = (21_000 + (68 * data.length)) * 2;
     const tx = { from: from.hash, to: contractAddress, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
