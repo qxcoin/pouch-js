@@ -4,7 +4,6 @@ import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
 import { ECPairFactory, ECPairAPI } from 'ecpair';
-import { RequestManager, HTTPTransport, Client } from "@open-rpc/client-js";
 import {
   Wallet,
   Address,
@@ -16,6 +15,7 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
+import axios, { Axios } from "axios";
 
 export interface BitcoinWalletConfig {
   rpcServer: string,
@@ -29,7 +29,7 @@ export class BitcoinWallet implements Wallet {
   private config: BitcoinWalletConfig;
   private bip32: BIP32API;
   private ecPair: ECPairAPI;
-  private client: Client;
+  private client: Axios;
 
   constructor(mnemonic: string, networkType: NetworkType, config: BitcoinWalletConfig) {
     this.mnemonic = mnemonic;
@@ -37,12 +37,24 @@ export class BitcoinWallet implements Wallet {
     this.config = config;
     this.bip32 = BIP32Factory(ecc);
     this.ecPair = ECPairFactory(ecc);
-    this.client = new Client(new RequestManager([new HTTPTransport(this.config.rpcServer)]));
     bitcoinjs.initEccLib(ecc);
+    this.client = axios.create({
+      baseURL: this.config.rpcServer,
+    });
+  }
+
+  private async request(method: string, params: unknown[] = []) {
+    const body = { "jsonrpc": "2.0", "id": "0", method, params };
+    const res = await this.client.post('', body);
+    const data = res.data;
+    if (null != data.error) throw new Error(data.error.message);
+    if (null == data.result) throw new Error('Invalid response, result not found.');
+    return data.result;
   }
 
   async getLastBlockHeight(): Promise<number> {
-    return (await this.client.request({ method: "getblockchaininfo" }))['blocks'];
+    const result = await this.request('getblockchaininfo');
+    return result['blocks'];
   }
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
@@ -54,7 +66,7 @@ export class BitcoinWallet implements Wallet {
   }
 
   async getMempool(): Promise<Mempool> {
-    const hashes = await this.client.request({ method: "getrawmempool", params: [false, false] });
+    const hashes = await this.request('getrawmempool', [false, false]);
     return new Mempool(hashes);
   }
 
@@ -67,8 +79,8 @@ export class BitcoinWallet implements Wallet {
   }
 
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction>> {
-    const blockHash = await this.client.request({ method: "getblockhash", params: [height] });
-    const result = await this.client.request({ method: "getblock", params: [blockHash, 2] });
+    const blockHash = await this.request('getblockhash', [height]);
+    const result = await this.request('getblock', [blockHash, 2]);
     const transactions: CoinTransaction[] = [];
     result.tx.forEach((tx: any) => {
       transactions.push(this.convertTx(bitcoinjs.Transaction.fromHex(tx.hex)));
@@ -77,7 +89,7 @@ export class BitcoinWallet implements Wallet {
   }
 
   async getTransaction(hash: string): Promise<CoinTransaction> {
-    const result = await this.client.request({ method: "getrawtransaction", params: [hash, true] });
+    const result = await this.request('getrawtransaction', [hash, true]);
     const tx = bitcoinjs.Transaction.fromHex(result['hex']);
     return this.convertTx(tx);
   }
@@ -110,7 +122,7 @@ export class BitcoinWallet implements Wallet {
 
   private async extractAddressFromInputPrevOut(inp: bitcoinjs.TxInput): Promise<string> {
     const txId = reverseBuffer(inp.hash).toString('hex');
-    const result = await this.client.request({ method: "getrawtransaction", params: [txId, true] });
+    const result = await this.request('getrawtransaction', [txId, true]);
     const tx = bitcoinjs.Transaction.fromHex(result['hex']);
     return this.extractAddressFromOutput(tx.outs[inp.index]!);
   }
@@ -175,6 +187,6 @@ export class BitcoinWallet implements Wallet {
   }
 
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {
-    await this.client.request({ method: "sendrawtransaction", params: [transaction.data, 0] });
+    await this.request("sendrawtransaction", [transaction.data, 0]);
   }
 }
