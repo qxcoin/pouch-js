@@ -14,11 +14,11 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
-import axios from "axios";
 import { ElectrumClient } from "./utils/electrum-client.js";
 import * as jsonrpc from "./utils/jsonrpc.js";
 import type { BlockchainScripthashGetBalance, BlockchainScripthashListunspent } from "./utils/electrum-rpc.d.ts";
 import type { GetBlockHash, GetBlockVerbosity2, GetBlockchainInfo, GetRawMempool, GetRawTransactionVerbose } from "./utils/bitcoin-rpc.d.ts";
+import { ofetch } from "ofetch";
 
 export interface BitcoinWalletConfig {
   server: string,
@@ -45,8 +45,7 @@ export class BitcoinWallet implements ScanWallet {
 
   private async request<ResultType = unknown, ErrorDataType = unknown>(method: string, params: unknown[] = []) {
     const body = { "jsonrpc": "2.0", "id": 0, method, params };
-    const res = await axios.post<jsonrpc.JsonRpcResult<ResultType> | jsonrpc.JsonRpcError<ErrorDataType>>(this.config.server, body);
-    const data = res.data;
+    const data = await ofetch<jsonrpc.JsonRpcResult<ResultType> | jsonrpc.JsonRpcError<ErrorDataType>>(this.config.server, { method: 'POST', body });
     if (jsonrpc.isError(data)) throw new Error(data.error.message);
     if (jsonrpc.isNotError(data)) return data.result;
     throw new Error('Malformed response.');
