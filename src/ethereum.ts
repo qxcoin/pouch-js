@@ -15,7 +15,6 @@ import {
   TokenTransaction,
   Mempool,
   Block,
-  SupportsToken,
 } from "./wallet.js";
 
 export type ContractAddress = string;
@@ -25,7 +24,7 @@ export interface EthereumWalletConfig {
   maxPriorityFeePerGas?: bigint,
 }
 
-export class EthereumWallet implements ScanWallet, SupportsToken {
+export class EthereumWallet implements ScanWallet {
 
   private mnemonic: string;
   private config: EthereumWalletConfig;
@@ -76,32 +75,14 @@ export class EthereumWallet implements ScanWallet, SupportsToken {
     return transactions;
   }
 
-  async getTransactions(hashes: string[]): Promise<CoinTransaction[]> {
+  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>> {
     throw new Error('This method is not supported.');
   }
 
-  async getTransaction(hash: string): Promise<CoinTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.web3.eth.getTransaction(hash, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
     const transaction = this.convertTx(tx);
-    if (transaction instanceof TokenTransaction) {
-      throw new Error(`Transaction [${hash}] is a token transaction.`);
-    } else {
-      return transaction;
-    }
-  }
-
-  async getTokenTransactions(hashes: string[]): Promise<TokenTransaction[]> {
-    throw new Error('This method is not supported.');
-  }
-
-  async getTokenTransaction(hash: string): Promise<TokenTransaction> {
-    const tx = await this.web3.eth.getTransaction(hash, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
-    const transaction = this.convertTx(tx);
-    if (transaction instanceof CoinTransaction) {
-      throw new Error(`Transaction [${hash}] is a coin transaction.`);
-    } else {
-      return transaction;
-    }
+    return transaction;
   }
 
   private convertTx(tx: Web3TransactionInfo): CoinTransaction | TokenTransaction {

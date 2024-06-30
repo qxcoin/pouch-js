@@ -13,7 +13,6 @@ import {
   TokenTransaction,
   Block,
   Mempool,
-  SupportsToken,
 } from "./wallet.js";
 import { AxiosHeaders } from "axios";
 import type {
@@ -34,7 +33,7 @@ export interface TronWalletConfig {
   headers?: Record<string, string>,
 }
 
-export class TronWallet implements ScanWallet, SupportsToken {
+export class TronWallet implements ScanWallet {
 
   private mnemonic: string;
   private config: TronWalletConfig;
@@ -117,32 +116,14 @@ export class TronWallet implements ScanWallet, SupportsToken {
     return transactions;
   }
 
-  async getTransactions(hashes: string[]): Promise<CoinTransaction[]> {
+  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>> {
     throw new Error('This method is not supported.');
   }
 
-  async getTransaction(hash: string): Promise<CoinTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
-    if (transaction instanceof TokenTransaction) {
-      throw new Error(`Transaction [${hash}] is a token transaction.`);
-    } else {
-      return transaction;
-    }
-  }
-
-  async getTokenTransactions(hashes: string[]): Promise<TokenTransaction[]> {
-    throw new Error('This method is not supported.');
-  }
-
-  async getTokenTransaction(hash: string): Promise<TokenTransaction> {
-    const tx = await this.tronweb.trx.getTransaction(hash);
-    const transaction = this.convertTx(tx);
-    if (transaction instanceof CoinTransaction) {
-      throw new Error(`Transaction [${hash}] is a coin transaction.`);
-    } else {
-      return transaction;
-    }
+    return transaction;
   }
 
   private convertTx(tx: TronTransaction): CoinTransaction | TokenTransaction {

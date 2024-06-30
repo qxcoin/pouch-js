@@ -1,2 +1,0 @@
-- [] tests shouldn't use IO connections, unless it is really required
-- [] update monero-javascript to monero-ts
