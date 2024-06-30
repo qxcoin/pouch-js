@@ -95,7 +95,7 @@ export class Block {
 
 export interface SyncWalletListener {
   onProgress(height: number): void;
-  onTransaction(transaction: CoinTransaction | TokenTransaction, blockHeight: number): void;
+  onTransaction(transaction: CoinTransaction | TokenTransaction, blockHeight: number | undefined): void;
 }
 
 export interface SyncWallet {
