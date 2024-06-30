@@ -99,7 +99,8 @@ export class MoneroWallet implements SyncWallet {
       }
       override async onOutputReceived(output: moneroTs.MoneroOutputWallet) {
         if (undefined !== listener.onTransaction) {
-          listener.onTransaction(await self.getTransaction(output.getTx().getHash()));
+          const tx = await self.getMoneroTx(output.getTx().getHash());
+          listener.onTransaction(self.convertTx(tx), tx.getHeight());
         }
       }
     }
@@ -115,10 +116,15 @@ export class MoneroWallet implements SyncWallet {
     throw new Error('This method is not supported.');
   }
 
-  async getTransaction(hash: string): Promise<CoinTransaction> {
+  private async getMoneroTx(hash: string): Promise<moneroTs.MoneroTxWallet> {
     const wallet = await this.getWalletFull();
     const tx = await wallet.getTx(hash);
     await wallet.close();
+    return tx;
+  }
+
+  async getTransaction(hash: string): Promise<CoinTransaction> {
+    const tx = await this.getMoneroTx(hash);
     return this.convertTx(tx);
   }
 
