@@ -135,10 +135,11 @@ export class BitcoinWallet implements ScanWallet {
     const client = this.createElectrumClient();
     await client.connect();
     const transactions: CoinTransaction[] = [];
+    let msgCount = 0;
     client.onMessage<string>(async (msg) => {
       if (jsonrpc.isNotError(msg))
         transactions.push(this.convertTx(bitcoinJs.Transaction.fromHex(msg.result)));
-      if (msg.id == (hashes.length - 1))
+      if (++msgCount >= hashes.length)
         await client.close();
     });
     for (const [i, h] of hashes.entries()) {
@@ -223,16 +224,16 @@ export class BitcoinWallet implements ScanWallet {
     prevOuts.sort((a, b) => {
       var bValue = b.tx.outputs[b.index]?.value ?? 0n;
       var aValue = a.tx.outputs[a.index]?.value ?? 0n;
-      return Number(bValue - aValue);
+      return Number(aValue - bValue);
     });
     const totalRequiredValue = value + this.config.fee;
     let totalAvailableValue = 0n;
     let requiredPrevOuts: typeof prevOuts = [];
-    prevOuts.forEach((v) => {
-      requiredPrevOuts.push(v);
-      totalAvailableValue += v.tx.outputs[v.index]?.value ?? 0n;
-      return totalAvailableValue >= totalRequiredValue ? false : undefined;
-    });
+    for (const po of prevOuts) {
+      requiredPrevOuts.push(po);
+      totalAvailableValue += po.tx.outputs[po.index]?.value ?? 0n;
+      if (totalAvailableValue >= totalRequiredValue) break;
+    }
     if (totalAvailableValue < totalRequiredValue) {
       throw new Error('Not enough balance.');
     }
