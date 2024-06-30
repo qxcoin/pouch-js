@@ -103,9 +103,12 @@ export interface SyncWallet {
   getSyncedBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
   sync(listener: Partial<SyncWalletListener>): Promise<void>;
-  getTransaction(hash: string): Promise<CoinTransaction>;
+  getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>>;
+  getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
+  createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
   estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
+  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
   getAddressBalance(address: Address): Promise<bigint>;
 }
@@ -119,8 +122,8 @@ export interface ScanWallet {
   getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
-  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
+  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
   getAddressBalance(address: Address): Promise<bigint>;
 }

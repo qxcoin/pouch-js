@@ -111,6 +111,10 @@ export class MoneroWallet implements SyncWallet {
     await wallet.close(true);
   }
 
+  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction>> {
+    throw new Error('This method is not supported.');
+  }
+
   async getTransaction(hash: string): Promise<CoinTransaction> {
     const wallet = await this.getWalletFull();
     const tx = await wallet.getTx(hash);
@@ -169,6 +173,8 @@ export class MoneroWallet implements SyncWallet {
 
   async getAddressBalance(address: Address): Promise<bigint> {
     const wallet = await this.getWalletFull();
-    return await wallet.getBalance(address.accountIndex, address.index);
+    const balance = await wallet.getBalance(address.accountIndex, address.index);
+    await wallet.close();
+    return balance;
   }
 }
