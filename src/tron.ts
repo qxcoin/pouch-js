@@ -13,6 +13,7 @@ import {
   TokenTransaction,
   Block,
   Mempool,
+  SupportsToken,
 } from "./wallet.js";
 import { AxiosHeaders } from "axios";
 import type {
@@ -33,7 +34,7 @@ export interface TronWalletConfig {
   headers?: Record<string, string>,
 }
 
-export class TronWallet implements ScanWallet {
+export class TronWallet implements ScanWallet, SupportsToken {
 
   private mnemonic: string;
   private config: TronWalletConfig;
@@ -116,14 +117,32 @@ export class TronWallet implements ScanWallet {
     return transactions;
   }
 
-  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>> {
+  async getTransactions(hashes: string[]): Promise<CoinTransaction[]> {
     throw new Error('This method is not supported.');
   }
 
-  async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
+  async getTransaction(hash: string): Promise<CoinTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
-    return transaction;
+    if (transaction instanceof TokenTransaction) {
+      throw new Error(`Transaction [${hash}] is a token transaction.`);
+    } else {
+      return transaction;
+    }
+  }
+
+  async getTokenTransactions(hashes: string[]): Promise<TokenTransaction[]> {
+    throw new Error('This method is not supported.');
+  }
+
+  async getTokenTransaction(hash: string): Promise<TokenTransaction> {
+    const tx = await this.tronweb.trx.getTransaction(hash);
+    const transaction = this.convertTx(tx);
+    if (transaction instanceof CoinTransaction) {
+      throw new Error(`Transaction [${hash}] is a coin transaction.`);
+    } else {
+      return transaction;
+    }
   }
 
   private convertTx(tx: TronTransaction): CoinTransaction | TokenTransaction {
@@ -281,7 +300,6 @@ export class TronWallet implements ScanWallet {
 
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const feeLimit = await this.estimateTokenTransactionFee(contractAddress, from, to, value);
-    console.log(feeLimit);
     const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value, feeLimit);
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }

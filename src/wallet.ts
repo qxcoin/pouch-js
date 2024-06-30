@@ -115,14 +115,19 @@ export interface ScanWallet {
   getAddress(index: number, accountIndex: number): Promise<Address>;
   getMempool(): Promise<Mempool>;
   getBlocks(fromHeight: number, toHeight: number): Promise<Block[]>;
-  getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>>;
-  getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
+  getTransactions(hashes: string[]): Promise<CoinTransaction[]>;
+  getTransaction(hash: string): Promise<CoinTransaction>;
   createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
   estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
-  createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
-  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
   getAddressBalance(address: Address): Promise<bigint>;
+}
+
+export interface SupportsToken {
+  getTokenTransactions(hashes: string[]): Promise<TokenTransaction[]>;
+  getTokenTransaction(hash: string): Promise<TokenTransaction>;
+  createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
+  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
 }
 
 export interface WalletConfigs {
@@ -169,5 +174,17 @@ export class WalletFactory {
 
   createEthereumWallet(): EthereumWallet {
     return new EthereumWallet(this.mnemonic, this.networkType, this.configs.ethereum);
+  }
+
+  isSyncWallet(wallet: SyncWallet | ScanWallet): wallet is SyncWallet {
+    return 'sync' in wallet;
+  }
+
+  isScanWallet(wallet: SyncWallet | ScanWallet): wallet is ScanWallet {
+    return 'getBlocks' in wallet;
+  }
+
+  supportsTokens<T extends SyncWallet | ScanWallet>(wallet: T): wallet is T & SupportsToken {
+    return 'getTokenTransaction' in wallet;
   }
 }

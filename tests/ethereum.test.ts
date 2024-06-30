@@ -37,7 +37,7 @@ test('can retrieve a coin transaction', async () => {
 
 test('can retrieve a token transaction', async () => {
   const wallet = createWallet('mainnet');
-  const tx = await wallet.getTransaction('0x946ae012ce77cbf7bfbf91efece0d0153c50328741240a54aed1e85c8e5c01ee');
+  const tx = await wallet.getTokenTransaction('0x946ae012ce77cbf7bfbf91efece0d0153c50328741240a54aed1e85c8e5c01ee');
   if (!(tx instanceof TokenTransaction)) return fail("Didn't get token transaction!");
   expect(tx.from).toBe('0x27686364d256efed49d5750f5c3fc70bac874682');
   expect(tx.to).toBe('0xf8Fe8ca234e9C060109CCAb2f1E4c09F99fac617');
