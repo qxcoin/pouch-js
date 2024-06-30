@@ -54,9 +54,12 @@ export class BitcoinWallet implements ScanWallet {
 
   private createElectrumClient() {
     const parsed = new URL(this.config.electrumServer);
-    const c = new ElectrumClient(parsed.hostname, parseInt(parsed.port), parsed.protocol.slice(0, -1));
+    const host = parsed.hostname;
+    const port = parseInt(parsed.port);
+    const protocol = parsed.protocol.slice(0, -1);
+    const c = new ElectrumClient(host, port, protocol);
     c.onTimeout(() => {
-      throw new Error('Electrum client timeout!');
+      throw new Error(`Electrum client timeout! ${JSON.stringify({ host, port, protocol })}`);
     });
     c.onError((e) => {
       throw new Error('Electrum client error!');
