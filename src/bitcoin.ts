@@ -16,8 +16,8 @@ import {
 } from "./wallet.js";
 import { ElectrumClient } from "./utils/electrum-client.js";
 import * as jsonrpc from "./utils/jsonrpc.js";
-import type { BlockchainScripthashGetBalance, BlockchainScripthashListunspent } from "./utils/electrum-rpc.d.ts";
-import type { GetBlockHash, GetBlockVerbosity2, GetBlockchainInfo, GetRawMempool, GetRawTransactionVerbose } from "./utils/bitcoin-rpc.d.ts";
+import type { BlockchainBlockHeader, BlockchainHeadersSubscribe, BlockchainScripthashGetBalance, BlockchainScripthashListunspent } from "./utils/electrum-rpc.d.ts";
+import type { GetBlockVerbosity2, GetRawMempool, GetRawTransactionVerbose } from "./utils/bitcoin-rpc.d.ts";
 import { ofetch } from "ofetch";
 
 export interface BitcoinWalletConfig {
@@ -58,7 +58,7 @@ export class BitcoinWallet implements ScanWallet {
     const protocol = parsed.protocol.slice(0, -1);
     const c = new ElectrumClient(host, port, protocol);
     c.onTimeout(() => {
-      throw new Error(`Electrum client timeout! ${JSON.stringify({ host, port, protocol })}`);
+      throw new Error(`Electrum client timeout! (server: ${protocol}://${host}:${port})`);
     });
     c.onError((e) => {
       throw new Error('Electrum client error!');
@@ -67,8 +67,37 @@ export class BitcoinWallet implements ScanWallet {
   }
 
   async getLastBlockHeight(): Promise<number> {
-    const result = await this.request<GetBlockchainInfo>('getblockchaininfo');
-    return result['blocks'];
+    const client = this.createElectrumClient();
+    await client.connect();
+    let height: number | undefined;
+    client.onMessage<BlockchainHeadersSubscribe>(async (msg) => {
+      if (jsonrpc.isNotError(msg)) height = msg.result.height;
+      await client.close();
+    });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "id": 0 });
+    return new Promise(async (res, rej) => {
+      client.onClose(() => {
+        if (undefined === height) rej('Failed to resolve block height.');
+        else res(height);
+      });
+    });
+  }
+
+  async getBlockHash(height: number): Promise<string> {
+    const client = this.createElectrumClient();
+    await client.connect();
+    let hash: string | undefined;
+    client.onMessage<BlockchainBlockHeader>(async (msg) => {
+      if (jsonrpc.isNotError(msg)) hash = bitcoinJs.Block.fromHex(msg.result).getId();
+      await client.close();
+    });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.block.header", params: [height, 0], "id": 0 });
+    return new Promise(async (res, rej) => {
+      client.onClose(() => {
+        if (undefined === hash) rej('Failed to resolve block hash.');
+        else res(hash);
+      });
+    });
   }
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
@@ -93,7 +122,7 @@ export class BitcoinWallet implements ScanWallet {
   }
 
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction>> {
-    const blockHash = await this.request<GetBlockHash>('getblockhash', [height]);
+    const blockHash = await this.getBlockHash(height);
     const result = await this.request<GetBlockVerbosity2>('getblock', [blockHash, 2]);
     const transactions: CoinTransaction[] = [];
     for (const tx of result.tx) {
@@ -123,9 +152,9 @@ export class BitcoinWallet implements ScanWallet {
   }
 
   async getTransaction(hash: string): Promise<CoinTransaction> {
-    const result = await this.request<GetRawTransactionVerbose>('getrawtransaction', [hash, true]);
-    const tx = bitcoinJs.Transaction.fromHex(result['hex']);
-    return this.convertTx(tx);
+    const transactions = await this.getTransactions([hash]);
+    if (undefined === transactions[0]) throw new Error(`Failed to get transaction ${hash}.`);
+    return transactions[0];
   }
 
   private convertTx(tx: bitcoinJs.Transaction): CoinTransaction {
