@@ -1,11 +1,11 @@
 import { Web3 } from "web3";
-import { FMT_BYTES, FMT_NUMBER, TransactionInfo as Web3TransactionInfo } from "web3-types";
+import { FMT_BYTES, FMT_NUMBER, Transaction as Web3Transaction, TransactionInfo as Web3TransactionInfo } from "web3-types";
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
 import ERC20 from '@openzeppelin/contracts/build/contracts/ERC20.json' assert { type: 'json' };
 import {
-  Wallet,
+  ScanWallet,
   Address,
   CoinTransaction,
   RawTransaction,
@@ -21,10 +21,10 @@ export type ContractAddress = string;
 
 export interface EthereumWalletConfig {
   provider: string,
-  maxPriorityFeePerGas?: number,
+  maxPriorityFeePerGas?: bigint,
 }
 
-export class EthereumWallet implements Wallet {
+export class EthereumWallet implements ScanWallet {
 
   private mnemonic: string;
   private config: EthereumWalletConfig;
@@ -75,6 +75,10 @@ export class EthereumWallet implements Wallet {
     return transactions;
   }
 
+  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>> {
+    throw new Error('This method is not supported.');
+  }
+
   async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.web3.eth.getTransaction(hash, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
     const transaction = this.convertTx(tx);
@@ -120,20 +124,31 @@ export class EthereumWallet implements Wallet {
     return new TokenTransaction(hash, JSON.stringify(tx), tx.from, to, tx.to, value);
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<RawTransaction> {
+  private async createWeb3Transaction(from: Address, to: string, value: bigint): Promise<Web3Transaction> {
     const baseFee = (await this.web3.eth.getBlock()).baseFeePerGas;
     if (undefined === baseFee) {
       throw new Error('Failed to retrieve base fee.');
     }
-    const maxFeePerGas = baseFee * 2n;
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 100_000;
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
+    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     const gasLimit = 21_000;
-    const tx = { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
+    return { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
+  }
+
+  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
+    const tx = await this.createWeb3Transaction(from, to, value);
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
     return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
+  async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
+    const tx = await this.createWeb3Transaction(from, to, value);
+    const gasLimit = this.web3.utils.toBigInt(tx.gasLimit);
+    const maxFeePerGas = this.web3.utils.toBigInt(tx.maxFeePerGas);
+    return gasLimit * maxFeePerGas;
+  }
+
+  private async createWeb3TokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<Web3Transaction> {
     const contract = new this.web3.eth.Contract(ERC20.abi, contractAddress);
     const transfer = contract.methods['transfer'];
     if (!transfer) {
@@ -144,15 +159,32 @@ export class EthereumWallet implements Wallet {
     if (undefined === baseFee) {
       throw new Error('Failed to retrieve base fee.');
     }
-    const maxFeePerGas = baseFee * 2n;
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 100_000;
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
+    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     const gasLimit = (21_000 + (68 * data.length)) * 2;
-    const tx = { from: from.hash, to: contractAddress, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
+    return { from: from.hash, to: contractAddress, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
+  }
+
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
+    const tx = await this.createWeb3TokenTransaction(contractAddress, from, to, value);
+    tx.gasLimit = await this.web3.eth.estimateGas({ from: tx.from, to: tx.to, data: tx.data });
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
     return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
 
+  async estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint> {
+    const tx = await this.createWeb3TokenTransaction(contractAddress, from, to, value);
+    const gasLimit = await this.web3.eth.estimateGas({ from: tx.from, to: tx.to, data: tx.data });
+    const maxFeePerGas = this.web3.utils.toBigInt(tx.maxFeePerGas);
+    return gasLimit * maxFeePerGas;
+  }
+
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     await this.web3.eth.sendSignedTransaction(transaction.data);
+  }
+
+  async getAddressBalance(address: Address) {
+    const balance = await this.web3.eth.getBalance(address.hash);
+    return balance;
   }
 }

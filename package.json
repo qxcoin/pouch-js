@@ -18,7 +18,8 @@
     "bitcoinjs-lib": "~6.1.5",
     "ecpair": "^2.1.0",
     "keccak": "^3.0.3",
-    "monero-javascript": "~0.7.12",
+    "monero-javascript": "^0.8.4",
+    "monero-ts": "^0.9.7",
     "tiny-secp256k1": "^2.2.1",
     "tronweb": "6.0.0-beta.3",
     "web3": "~4.9.0",
@@ -31,6 +32,6 @@
     "@types/wif": "^2.0.2",
     "tsx": "^4.11.0",
     "typescript": "^5.0.2",
-    "vitest": "^1.6.0"
+    "vitest": "~1.5.3"
   }
 }

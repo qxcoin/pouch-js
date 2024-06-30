@@ -1,23 +1,24 @@
-import monerojs, { MoneroWalletListener } from "monero-javascript";
+import moneroTs from "monero-ts";
 import * as bip39 from 'bip39';
 import createKeccakHash from "keccak";
 import {
-  Wallet,
   Address,
   CoinTransaction,
   RawTransaction,
   NetworkType,
   TransactionOutput,
   TransactionInput,
-  Mempool,
-  Block,
+  SyncWallet,
+  SyncWalletListener,
 } from "./wallet.js";
+import fs from 'node:fs';
 
 export interface MoneroWalletConfig {
+  path: string,
   server: string,
 }
 
-export class MoneroWallet implements Wallet {
+export class MoneroWallet implements SyncWallet {
 
   private privateSpendKey: string;
   private networkType: NetworkType;
@@ -29,27 +30,53 @@ export class MoneroWallet implements Wallet {
     this.config = config;
   }
 
-  async createWalletKeys() {
-    return await monerojs.createWalletKeys({
+  private async createWalletKeys() {
+    return await moneroTs.createWalletKeys({
       networkType: this.networkType,
       privateSpendKey: this.privateSpendKey,
       proxyToWorker: false,
     });
   }
 
-  async createWalletFull() {
-    return await monerojs.createWalletFull({
+  private async createWalletFull() {
+    return await moneroTs.createWalletFull({
+      path: this.config.path,
       password: 'ssp',
       networkType: this.networkType,
       privateSpendKey: this.privateSpendKey,
       server: this.config.server,
       proxyToWorker: false,
+      restoreHeight: await this.getLastBlockHeight(),
     });
   }
 
+  private async openWalletFull() {
+    return await moneroTs.openWalletFull({
+      path: this.config.path,
+      password: 'ssp',
+      networkType: this.networkType,
+      server: this.config.server,
+      proxyToWorker: false,
+    });
+  }
+
+  async getWalletFull() {
+    if (fs.existsSync(this.config.path)) {
+      return this.openWalletFull();
+    } else {
+      return this.createWalletFull();
+    }
+  }
+
   async getLastBlockHeight(): Promise<number> {
-    const wallet = await this.createWalletFull();
-    const height = await wallet.getDaemonHeight();
+    const daemon = await moneroTs.connectToDaemonRpc(this.config.server);
+    const height = await daemon.getHeight();
+    return height;
+  }
+
+  async getSyncedBlockHeight(): Promise<number> {
+    const wallet = await this.getWalletFull();
+    const height = await wallet.getHeight();
     await wallet.close();
     return height;
   }
@@ -62,79 +89,86 @@ export class MoneroWallet implements Wallet {
     return addr;
   }
 
-  async getMempool(): Promise<Mempool> {
-    return new Mempool([]);
+  private createMoneroListener(listener: Partial<SyncWalletListener>) {
+    const self = this;
+    return new class extends moneroTs.MoneroWalletListener {
+      override async onSyncProgress(height: number, startHeight: number, endHeight: number, percentDone: number, message: string) {
+        if (undefined !== listener.onProgress) {
+          listener.onProgress(height);
+        }
+      }
+      override async onOutputReceived(output: moneroTs.MoneroOutputWallet) {
+        if (undefined !== listener.onTransaction) {
+          listener.onTransaction(await self.getTransaction(output.getTx().getHash()));
+        }
+      }
+    }
   }
 
-  async getBlocks(fromHeight: number, toHeight: number): Promise<Block[]> {
-    const wallet = await this.createWalletFull();
-    await wallet.sync(this.syncListener(wallet, toHeight), fromHeight);
-    const txs = await wallet.getTxs({ minHeight: fromHeight, maxHeight: toHeight, isIncoming: true });
-    await wallet.close();
-    const txMap = new Map<number, CoinTransaction[]>();
-    for (const tx of txs) {
-      const height = tx.getHeight();
-      if (txMap.has(height)) txMap.get(height)!.push(this.convertTx(tx));
-      else txMap.set(height, [this.convertTx(tx)]);
-    }
-    const blocks: Block[] = [];
-    for (let height = fromHeight; height <= toHeight; height++) {
-      blocks.push(new Block(height, txMap.get(height) ?? []));
-    }
-    return blocks;
+  async sync(listener: Partial<SyncWalletListener> = {}) {
+    const wallet = await this.getWalletFull();
+    await wallet.sync(this.createMoneroListener(listener));
+    await wallet.close(true);
   }
 
   async getTransaction(hash: string): Promise<CoinTransaction> {
-    const wallet = await this.createWalletFull();
-    await wallet.scanTxs([hash]);
+    const wallet = await this.getWalletFull();
     const tx = await wallet.getTx(hash);
     await wallet.close();
     return this.convertTx(tx);
   }
 
-  private convertTx(tx: any): CoinTransaction {
+  private convertTx(tx: moneroTs.MoneroTxWallet): CoinTransaction {
     // it is not possible to read inputs from XMR blockchain, they are hidden
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];
-    tx.getTransfers().forEach((t: any, i: number) => {
-      if (t.isIncoming())
-        outputs.push(new TransactionOutput(i, BigInt(t.getAmount().toString()), async () => t.getAddress()));
+    tx.getTransfers().forEach((t: moneroTs.MoneroTransfer, i: number) => {
+      if (t instanceof moneroTs.MoneroIncomingTransfer)
+        outputs.push(new TransactionOutput(i, t.getAmount(), async () => t.getAddress()));
     });
     // NOTE: it seems `getFullHex` is undefined.
     // see: https://github.com/woodser/monero-ts/issues/214
     return new CoinTransaction(tx.getHash(), tx.getFullHex() ?? '', inputs, outputs);
   }
 
-  syncListener(wallet: any, to: number) {
-    return new class extends MoneroWalletListener {
-      onSyncProgress(height: number) {
-        if (height >= to) wallet.stopSyncing();
-      }
-    }
-  }
-
-  async createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction> {
-    const wallet = await this.createWalletFull();
-    await wallet.scanTxs(spending.map((tx) => tx.hash));
-    const syncRange = await wallet.getNumBlocksToUnlock();
-    await wallet.sync(this.syncListener(wallet, syncRange[1]), syncRange[0]);
+  private async createMoneroTx(from: Address, to: string, value: bigint): Promise<moneroTs.MoneroTxWallet> {
+    const wallet = await this.getWalletFull();
     const tx = await wallet.createTx({
       address: to,
-      amount: value.toString(),
+      amount: value,
       accountIndex: from.accountIndex,
       subaddressIndex: from.index,
     });
     await wallet.close();
+    return tx;
+  }
+
+  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
+    const tx = await this.createMoneroTx(from, to, value);
     return new RawTransaction(tx.getHash(), tx.getMetadata());
+  }
+
+  async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
+    const tx = await this.createMoneroTx(from, to, value);
+    return tx.getFee();
   }
 
   createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
     throw new Error('Tokens are not supported by Monero blockchain.');
   }
 
+  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint> {
+    throw new Error('Tokens are not supported by Monero blockchain.');
+  }
+
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {
-    const wallet = await this.createWalletFull();
-    wallet.relayTx(transaction.data);
+    const wallet = await this.getWalletFull();
+    await wallet.relayTx(transaction.data);
     await wallet.close();
+  }
+
+  async getAddressBalance(address: Address): Promise<bigint> {
+    const wallet = await this.getWalletFull();
+    return await wallet.getBalance(address.accountIndex, address.index);
   }
 }

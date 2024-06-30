@@ -3,7 +3,7 @@ import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
 import {
-  Wallet,
+  ScanWallet,
   Address,
   NetworkType,
   CoinTransaction,
@@ -15,19 +15,25 @@ import {
   Mempool,
 } from "./wallet.js";
 import { AxiosHeaders } from "axios";
-import type { Transaction as TronTransaction } from "tronweb/lib/esm/types/Transaction.js";
+import type {
+  SignedTransaction as TronSignedTransaction,
+  Transaction as TronTransaction,
+} from "tronweb/lib/esm/types/Transaction.js";
 import type {
   TransferContract as TronTransferContract,
   TriggerSmartContract as TronTriggerSmartContract,
 } from "tronweb/lib/esm/types/Contract.js";
 import type { Block as TronBlock } from "tronweb/lib/esm/types/APIResponse.js";
+import {
+  TriggerSmartContractOptions as TronTriggerSmartContractOptions,
+} from "tronweb/lib/esm/types/TransactionBuilder.js";
 
 export interface TronWalletConfig {
   provider: string,
   headers?: Record<string, string>,
 }
 
-export class TronWallet implements Wallet {
+export class TronWallet implements ScanWallet {
 
   private mnemonic: string;
   private config: TronWalletConfig;
@@ -110,6 +116,10 @@ export class TronWallet implements Wallet {
     return transactions;
   }
 
+  async getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>> {
+    throw new Error('This method is not supported.');
+  }
+
   async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
     const tx = await this.tronweb.trx.getTransaction(hash);
     const transaction = this.convertTx(tx);
@@ -163,21 +173,125 @@ export class TronWallet implements Wallet {
     return new TokenTransaction(tx.txID, tx.raw_data_hex, from, to, contractAddress, params[1].toBigInt());
   }
 
-  async createTransaction(from: Address, to: string, value: bigint, _spending: Array<RawTransaction>): Promise<RawTransaction> {
-    const tx = await this.tronweb.transactionBuilder.sendTrx(to, Number(value), from.hash);
-    const signedTx = await this.tronweb.trx.sign(tx, from.privateKey.toString('hex'));
+  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
+    const signedTx = await this.createTronSignedTransaction(from, to, value);
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
+  private async createTronSignedTransaction(from: Address, to: string, value: bigint): Promise<TronSignedTransaction> {
+    const tx = await this.tronweb.transactionBuilder.sendTrx(to, Number(value), from.hash);
+    return await this.tronweb.trx.sign(tx, from.privateKey.toString('hex'));
+  }
+
+  async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
+    const signedTx = await this.createTronSignedTransaction(from, to, value);
+    const txBandwidth = this.estimateBandwidth(signedTx);
+    const accountBandwidth = await this.getAddressBandwidth(from.hash);
+    const fee = await this.getBandwidthFee(accountBandwidth, txBandwidth);
+    return BigInt(fee);
+  }
+
+  private async getBandwidthFee(accountBandwidth: number, txBandwidth: number) {
+    if (accountBandwidth < txBandwidth) {
+      const bandwidthPrice = await this.getBandwidthPrice();
+      return (txBandwidth * bandwidthPrice);
+    } else {
+      return 0;
+    }
+  }
+
+  private async getBandwidthPrice() {
+    const prices = await this.tronweb.trx.getBandwidthPrices();
+    const lastPriceAndTime = prices.split(',').pop();
+    if (undefined === lastPriceAndTime) throw new Error('Failed to get last bandwidth price.');
+    const lastPrice = lastPriceAndTime.split(':')[1];
+    if (undefined === lastPrice) throw new Error('Failed to get last bandwidth price.');
+    return Number(lastPrice);
+  }
+
+  private estimateBandwidth(signedTx: TronSignedTransaction) {
+    const DATA_HEX_PROTOBUF_EXTRA = 3;
+    const MAX_RESULT_SIZE_IN_TX = 64;
+    const A_SIGNATURE = 67;
+
+    let len = signedTx.raw_data_hex.length / 2 + DATA_HEX_PROTOBUF_EXTRA + MAX_RESULT_SIZE_IN_TX;
+    const signatureListSize = signedTx.signature.length;
+    for (let i = 0; i < signatureListSize; i++) len += A_SIGNATURE;
+    return len;
+  }
+
+  private async getAddressBandwidth(address: string) {
+    const resources = await this.tronweb.trx.getAccountResources(address);
+    const limit = resources.freeNetLimit + (resources.NetLimit ?? 0);
+    const used = resources.freeNetUsed + (resources.NetUsed ?? 0);
+    return limit - used;
+  }
+
+  private async getAddressEnergy(address: string) {
+    const resources = await this.tronweb.trx.getAccountResources(address);
+    const limit = (resources.EnergyLimit ?? 0);
+    const used = (resources.EnergyUsed ?? 0);
+    return limit - used;
+  }
+
+  private async getEnergyPrice() {
+    const prices = await this.tronweb.trx.getEnergyPrices();
+    const lastPriceAndTime = prices.split(',').pop();
+    if (undefined === lastPriceAndTime) throw new Error('Failed to get last energy price.');
+    const lastPrice = lastPriceAndTime.split(':')[1];
+    if (undefined === lastPrice) throw new Error('Failed to get last energy price.');
+    return Number(lastPrice);
+  }
+
+  private async getEnergyFee(accountEnergy: number, txEnergy: number) {
+    if (accountEnergy < txEnergy) {
+      const energyPrice = await this.getEnergyPrice();
+      return (txEnergy * energyPrice);
+    } else {
+      return 0;
+    }
+  }
+
+  private async estimateEnergy(contractAddress: string, from: Address, to: string, value: bigint) {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value: Number(value) }];
-    const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, {}, parameter, from.hash);
-    const signedTx = await this.tronweb.trx.sign(tx.transaction, from.privateKey.toString('hex'));
+    const estimateEnergy = await this.tronweb.transactionBuilder.estimateEnergy(contractAddress, func, {}, parameter, from.hash);
+    return estimateEnergy.energy_required;
+  }
+
+  private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, feeLimit?: bigint): Promise<TronSignedTransaction> {
+    const func = 'transfer(address,uint256)';
+    const parameter = [{ type: 'address', value: to }, { type: 'uint256', value: Number(value) }];
+    const options: TronTriggerSmartContractOptions = {};
+    if (undefined !== feeLimit) options.feeLimit = Number(feeLimit);
+    const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, options, parameter, from.hash);
+    return await this.tronweb.trx.sign(tx.transaction, from.privateKey.toString('hex'));
+  }
+
+  async estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint> {
+    const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value);
+    const txBandwidth = this.estimateBandwidth(signedTx);
+    const txEnergy = await this.estimateEnergy(contractAddress, from, to, value);
+    const accountBandwidth = await this.getAddressBandwidth(from.hash);
+    const accountEnergy = await this.getAddressEnergy(from.hash);
+    const bandwidthFee = await this.getBandwidthFee(accountBandwidth, txBandwidth);
+    const energyFee = await this.getEnergyFee(accountEnergy, txEnergy);
+    return BigInt(bandwidthFee + energyFee);
+  }
+
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
+    const feeLimit = await this.estimateTokenTransactionFee(contractAddress, from, to, value);
+    console.log(feeLimit);
+    const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value, feeLimit);
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
   async broadcastTransaction(transaction: RawTransaction): Promise<void> {
     this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
+  }
+
+  async getAddressBalance(address: Address) {
+    const balance = await this.tronweb.trx.getBalance(address.hash);
+    return BigInt(balance);
   }
 }

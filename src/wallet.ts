@@ -2,7 +2,6 @@ import { BitcoinWallet, BitcoinWalletConfig } from "./bitcoin.js";
 import { MoneroWallet, MoneroWalletConfig } from "./monero.js";
 import { EthereumWallet, EthereumWalletConfig } from "./ethereum.js";
 import { TronWallet, TronWalletConfig } from "./tron.js";
-import { BscWallet, BscWalletConfig } from "./bsc.js";
 
 export type NetworkType = "mainnet" | "testnet";
 
@@ -94,15 +93,36 @@ export class Block {
   }
 }
 
-export interface Wallet {
+export interface SyncWalletListener {
+  onProgress(height: number): Promise<void>;
+  onTransaction(transaction: CoinTransaction): Promise<void>;
+}
+
+export interface SyncWallet {
+  getLastBlockHeight(): Promise<number>;
+  getSyncedBlockHeight(): Promise<number>;
+  getAddress(index: number, accountIndex: number): Promise<Address>;
+  sync(listener: Partial<SyncWalletListener>): Promise<void>;
+  getTransaction(hash: string): Promise<CoinTransaction>;
+  createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
+  estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
+  broadcastTransaction(transaction: RawTransaction): Promise<void>;
+  getAddressBalance(address: Address): Promise<bigint>;
+}
+
+export interface ScanWallet {
   getLastBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
   getMempool(): Promise<Mempool>;
   getBlocks(fromHeight: number, toHeight: number): Promise<Block[]>;
+  getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>>;
   getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
-  createTransaction(from: Address, to: string, value: bigint, spending: Array<RawTransaction>): Promise<RawTransaction>;
+  createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
+  estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
   createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction>;
+  estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
+  getAddressBalance(address: Address): Promise<bigint>;
 }
 
 export interface WalletConfigs {
@@ -110,7 +130,6 @@ export interface WalletConfigs {
   monero: MoneroWalletConfig,
   ethereum: EthereumWalletConfig,
   tron: TronWalletConfig,
-  bsc: BscWalletConfig,
 }
 
 export type WalletTypes = keyof WalletConfigs;
@@ -121,18 +140,16 @@ export class WalletFactory {
     // pass
   }
 
-  create(type: WalletTypes): Wallet {
+  create(type: WalletTypes): SyncWallet | ScanWallet {
     switch (type) {
       case 'bitcoin':
         return this.createBitcoinWallet();
       case 'monero':
         return this.createMoneroWallet();
       case 'tron':
-          return this.createTronWallet();
+        return this.createTronWallet();
       case 'ethereum':
         return this.createEthereumWallet();
-      case 'bsc':
-        return this.createBscWallet();
       default:
         throw new Error(`Wallet [${type}] is not supported.`);
     }
@@ -152,9 +169,5 @@ export class WalletFactory {
 
   createEthereumWallet(): EthereumWallet {
     return new EthereumWallet(this.mnemonic, this.networkType, this.configs.ethereum);
-  }
-
-  createBscWallet(): BscWallet {
-    return new BscWallet(this.mnemonic, this.networkType, this.configs.bsc);
   }
 }

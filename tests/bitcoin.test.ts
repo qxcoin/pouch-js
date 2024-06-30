@@ -1,13 +1,14 @@
 import wif from 'wif';
-import { Address, RawTransaction } from '../src/wallet';
+import { Address } from '../src/wallet';
 import { BitcoinWallet } from '../src/bitcoin';
 import { expect, test, vi } from 'vitest';
 
 function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
   return new BitcoinWallet(mnemonic, network, {
-    rpcServer: 'testnet' === network ? 'https://go.getblock.io/204e9839582942599ea222a86f6f937d' : 'https://go.getblock.io/139892f83b72409bb850d16de30d51d7',
-    fee: BigInt(0.001 * 100000000),
+    server: 'testnet' === network ? 'https://go.getblock.io/204e9839582942599ea222a86f6f937d' : 'https://go.getblock.io/139892f83b72409bb850d16de30d51d7',
+    electrumServer: 'testnet' === network ? 'ssl://testnet.aranguren.org:51002' : 'ssl://elx.bitske.com:50002',
+    fee: 1n,
   });
 }
 
@@ -30,19 +31,17 @@ test('can create valid address', async () => {
 test('can create transaction for P2PKH', async () => {
   const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
-  const spending = [new RawTransaction('940117f6669da0c9855b435d52c20b02117dc21290af4dd7df9bf381b2c6a2cc', '020000000001012beeeacb02a43ea4dc9c08c3c9701143fa59364bfcdb158b30fa8b0941dbb4b90100000000feffffff027cc2a5910100000016001434f54c5712a20f91f6995d5a014d5112d30eaa130823160000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d024730440220712dba203a2185f7f59b2f7c3a2cf9ef0163821f05faa649701055382f1bc28902204a0aed4dde6f381a627711a94f6bad9ef73ad54b684fe7cabdab33980f9291a701210363d67b1556d9117a515f1a7b4afbafe3b658537c2079bef615d612e2042df5d04b0b2500')];
-  const rawTx = await wallet.createTransaction(from, 'n2gTQ45JG7RzfjafW4MVvh7EseVX5VGHTs', BigInt(0.002 * 100000000), spending);
-  expect(rawTx.hash).toBe('6a46b555c2b47d625b4554e1679fee4ad0476dfdb9075efe47c75e6c61f24a86');
-  expect(rawTx.data).toBe('02000000000101cca2c6b281f39bdfd74daf9012c27d11020bc2525d435b85c9a09d66f61701940100000000ffffffff02400d0300000000001976a914e826adf04887f3e3e2d3b8b40ff12596b80b301d88ac288f110000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d02483045022100f2bf7408fdfe36378e4f7db0a9acde516944c1845566f285cf5e3c4d93dcfd3402201b6d638e75264d0bca8500db833c8830148bfedfdfc83ba81a0fc3b9a24c0726012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
+  const rawTx = await wallet.createTransaction(from, 'n2gTQ45JG7RzfjafW4MVvh7EseVX5VGHTs', 1n);
+  expect(rawTx.hash).toBe('3b9c11729076f97334a83f5db0065949db783719f2b98070612df07fae5fb8de');
+  expect(rawTx.data).toBe('020000000001029e50b71fd7d5d847f998d5d3a69d8e856563f1aa3551be4878daffe70d00cf4f0000000000ffffffff684a66085ec820c03c10eb9ea8c951f1aa27b531030d0318654868ba208a4d8c0000000000ffffffff0201000000000000001976a914e826adf04887f3e3e2d3b8b40ff12596b80b301d88acff89000000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d02483045022100e3576cb496fce283c29957525711cf7bb8346732e3bda59dc2848c712a47e58c02205570f45c7115755c827cae8b9f5d91981f993a6a8063a00b3ba4ea409b5a4d0e012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a02483045022100881ea0b23444650ef9b7aff40988e1530b7f1ed1f01f1185a3b09c6b7d164cca02200bb3c72d129be5c8ce00425eff0ee25bbbcbe19c4e849470d49f7b5c29e6a152012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
 });
 
 test('can create transaction for P2WPKH', async () => {
   const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
-  const spending = [new RawTransaction('940117f6669da0c9855b435d52c20b02117dc21290af4dd7df9bf381b2c6a2cc', '020000000001012beeeacb02a43ea4dc9c08c3c9701143fa59364bfcdb158b30fa8b0941dbb4b90100000000feffffff027cc2a5910100000016001434f54c5712a20f91f6995d5a014d5112d30eaa130823160000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d024730440220712dba203a2185f7f59b2f7c3a2cf9ef0163821f05faa649701055382f1bc28902204a0aed4dde6f381a627711a94f6bad9ef73ad54b684fe7cabdab33980f9291a701210363d67b1556d9117a515f1a7b4afbafe3b658537c2079bef615d612e2042df5d04b0b2500')];
-  const rawTx = await wallet.createTransaction(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', BigInt(0.002 * 100000000), spending);
-  expect(rawTx.hash).toBe('1ebecbd8a1928f4087abacd803a30bd5061c97f3dfec9f6f9014317a48fc6afa');
-  expect(rawTx.data).toBe('02000000000101cca2c6b281f39bdfd74daf9012c27d11020bc2525d435b85c9a09d66f61701940100000000ffffffff02400d0300000000001600145e5406ef5525b6c9483d71b39669116fbda1528f288f110000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d024830450221008b832c076120677756b15d9b96f2bc442a799f6be66ac450d2b30d848fa7bbec02201dd0a25fe59d46d69ba4938d396472cb49342c85c35ba507cfe654a2a78e1a1e012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
+  const rawTx = await wallet.createTransaction(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', 1n);
+  expect(rawTx.hash).toBe('a4910a3acbf0438484603765553249444318552443f71eea82154595d663cfd1');
+  expect(rawTx.data).toBe('020000000001029e50b71fd7d5d847f998d5d3a69d8e856563f1aa3551be4878daffe70d00cf4f0000000000ffffffff684a66085ec820c03c10eb9ea8c951f1aa27b531030d0318654868ba208a4d8c0000000000ffffffff0201000000000000001600145e5406ef5525b6c9483d71b39669116fbda1528fff89000000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d0247304402207ff811721e968161f83269de72e24f7c6806fa397d670af458c09496ac091cf2022074a6e6f1fbfddec2ad056d8f62ea9ddbe82f1f59baf50b6399eaede1d5fca6ef012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a024730440220529ed2ba5eab2e50f10cb10e4bd7f9b1b092d2918db2bf2a64650504a1ddc986022038620087071681ea93f8e06fb88ef39219a83c66230615c75d95f66a1ed6e739012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
 });
 
 // test using Pizza Transaction
@@ -124,4 +123,11 @@ test('can retrieve transactions of a block range', async () => {
   const blocks = await wallet.getBlocks(1, 2);
   expect(blocks[0]?.transactions[0]?.hash).toBe('f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba');
   expect(blocks[1]?.transactions[0]?.hash).toBe('20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2');
+});
+
+test('can retrieve address balance', async () => {
+  const wallet = createWallet('testnet');
+  const addr = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
+  const balance = await wallet.getAddressBalance(addr);
+  expect(balance).toBe(35329n);
 });
