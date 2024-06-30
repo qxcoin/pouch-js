@@ -125,6 +125,19 @@ test('can retrieve transactions of a block range', async () => {
   expect(blocks[1]?.transactions[0]?.hash).toBe('20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2');
 });
 
+test('can retrieve multiple transactions', async () => {
+  const wallet = createWallet('testnet');
+  const hashes = [
+    '8c4d8a20ba68486518030d0331b527aaf151c9a89eeb103cc020c85e08664a68',
+    '4fcf000de7ffda7848be5135aaf16365858e9da6d3d598f947d8d5d71fb7509e',
+    '22f94a2407ba72502f6a4b5787418f581e67f298a225287400b6eb4759855986',
+  ];
+  const transactions = await wallet.getTransactions(hashes);
+  expect(hashes[0]).toBe(transactions[0].hash);
+  expect(hashes[1]).toBe(transactions[1].hash);
+  expect(hashes[2]).toBe(transactions[2].hash);
+});
+
 test('can retrieve address balance', async () => {
   const wallet = createWallet('testnet');
   const addr = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));

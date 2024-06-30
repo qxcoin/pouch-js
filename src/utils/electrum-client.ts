@@ -33,7 +33,7 @@ export class ElectrumClient {
     this.messageParser = new ElectrumMessageParser((msg: string) => {
       this.messageCallback(JSON.parse(msg));
     });
-    this.client.setTimeout(10_000);
+    this.client.setTimeout(90_000);
     this.client.setKeepAlive(true, 0);
     this.client.setNoDelay(true);
     this.client.on('data', (data) => {
