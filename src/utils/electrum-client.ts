@@ -2,6 +2,8 @@ import net from 'node:net';
 import tls from 'node:tls';
 import { ElectrumMessageParser } from './electrum-message-parser.js';
 import { JsonRpcError, JsonRpcResult } from './jsonrpc.js';
+import * as jsonrpc from "./jsonrpc.js";
+import { ServerVersion } from './electrum-rpc.js';
 
 type MessageCallback<ResultType, ErrorDataType> = (msg: JsonRpcResult<ResultType> | JsonRpcError<ErrorDataType>) => void;
 
@@ -48,10 +50,20 @@ export class ElectrumClient {
   }
 
   async connect(): Promise<void> {
-    const client = this.client;
     return new Promise((res, rej) => {
-      client.connect(this.port, this.host, () => {
+      this.client.connect(this.port, this.host, async () => {
+        await this.negotiateVersion();
         res();
+      });
+    });
+  }
+
+  async negotiateVersion() {
+    await this.send({ "jsonrpc": "2.0", "method": "server.version", "params": ["Pouch Electrum Client", "1.4"], "id": 0 });
+    return new Promise<ServerVersion>((res, rej) => {
+      this.onMessage<ServerVersion>((msg) => {
+        if (jsonrpc.isNotError(msg)) res(msg.result);
+        else rej('Failed to negotiate version.');
       });
     });
   }

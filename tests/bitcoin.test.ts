@@ -7,7 +7,7 @@ function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
   return new BitcoinWallet(mnemonic, network, {
     server: 'testnet' === network ? 'https://go.getblock.io/204e9839582942599ea222a86f6f937d' : 'https://go.getblock.io/139892f83b72409bb850d16de30d51d7',
-    electrumServer: 'testnet' === network ? 'ssl://testnet.aranguren.org:51002' : 'ssl://elx.bitske.com:50002',
+    electrumServer: 'testnet' === network ? 'ssl://testnet.qtornado.com:51002' : 'ssl://elx.bitske.com:50002',
     fee: 1n,
   });
 }

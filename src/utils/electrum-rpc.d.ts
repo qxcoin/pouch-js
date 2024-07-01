@@ -1,3 +1,5 @@
+export type ServerVersion = [string, string];
+
 export type BlockchainScripthashGetBalance = {
   confirmed: number,
   unconfirmed: number,
@@ -16,3 +18,5 @@ export type BlockchainHeadersSubscribe = {
 };
 
 export type BlockchainBlockHeader = string;
+
+export type BlockchainTransactionGet = string;
