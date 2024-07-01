@@ -9,7 +9,7 @@ export type BlockchainScripthashListunspent = Array<{
   height: number,
   tx_pos: number,
   tx_hash: string,
-  value: nunber,
+  value: number,
 }>;
 
 export type BlockchainHeadersSubscribe = {
