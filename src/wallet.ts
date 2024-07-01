@@ -110,7 +110,8 @@ export interface SyncWallet {
   estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
   estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
-  getAddressBalance(address: Address): Promise<bigint>;
+  getAddressBalance(address: string): Promise<bigint>;
+  getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint>;
 }
 
 export interface ScanWallet {
@@ -125,7 +126,8 @@ export interface ScanWallet {
   estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint>;
   estimateTokenTransactionFee(contractAddress: string, from: Address, to: string, value: bigint): Promise<bigint>;
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
-  getAddressBalance(address: Address): Promise<bigint>;
+  getAddressBalance(address: string): Promise<bigint>;
+  getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint>;
 }
 
 export interface WalletConfigs {

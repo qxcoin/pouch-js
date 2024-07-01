@@ -91,9 +91,16 @@ test('can retrieve transactions of a block range larger than 100', async () => {
 
 test('can retrieve address balance', async () => {
   const wallet = createWallet('testnet');
-  const addr = new Address(0, 0, 'TAKu6XAtzZqUdVXh5k4qZZ7LwNeyJjqVgi', Buffer.from('ce11c0f1778d6ad49bbe049b34c5963138a277fd25f4a9ea6b7e7eb8d506059b', 'hex'));
+  const addr = 'TAKu6XAtzZqUdVXh5k4qZZ7LwNeyJjqVgi';
   const balance = await wallet.getAddressBalance(addr);
   expect(balance).toBe(333719n);
+});
+
+test('can retrieve address token balance', async () => {
+  const wallet = createWallet('testnet');
+  const addr = 'TAKu6XAtzZqUdVXh5k4qZZ7LwNeyJjqVgi';
+  const balance = await wallet.getAddressTokenBalance('TZAMowU7LPttMHV4ba9osJSmYw6i6erC2d', addr);
+  expect(typeof balance).toBe('bigint');
 });
 
 test('can estimate transaction fee', async () => {

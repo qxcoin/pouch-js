@@ -152,7 +152,7 @@ export class EthereumWallet implements ScanWallet {
     const contract = new this.web3.eth.Contract(ERC20.abi, contractAddress);
     const transfer = contract.methods['transfer'];
     if (!transfer) {
-      throw new Error('Transfer method of contract cannot be found.');
+      throw new Error('Method [transfer] of the contract cannot be found.');
     }
     const data = transfer(to, value).encodeABI();
     const baseFee = (await this.web3.eth.getBlock()).baseFeePerGas;
@@ -183,8 +183,17 @@ export class EthereumWallet implements ScanWallet {
     await this.web3.eth.sendSignedTransaction(transaction.data);
   }
 
-  async getAddressBalance(address: Address) {
-    const balance = await this.web3.eth.getBalance(address.hash);
+  async getAddressBalance(address: string) {
+    const balance = await this.web3.eth.getBalance(address);
     return balance;
+  }
+
+  async getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint> {
+    const contract = new this.web3.eth.Contract(ERC20.abi, contractAddress);
+    const balanceOf = contract.methods['balanceOf'];
+    if (!balanceOf) {
+      throw new Error('Method [balanceOf] of contract cannot be found.');
+    }
+    return await balanceOf(address).call();
   }
 }

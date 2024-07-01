@@ -166,11 +166,11 @@ export class TronWallet implements ScanWallet {
     if (method !== 'a9059cbb') {
       throw new Error(`Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
     }
-    const params = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
+    const decoded = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
     const from = this.encodeAddress(value.owner_address);
-    const to = this.encodeAddress(params[0].toString());
+    const to = this.encodeAddress(decoded[0].toString());
     const contractAddress = this.encodeAddress(value.contract_address);
-    return new TokenTransaction(tx.txID, tx.raw_data_hex, from, to, contractAddress, params[1].toBigInt());
+    return new TokenTransaction(tx.txID, tx.raw_data_hex, from, to, contractAddress, decoded[1].toBigInt());
   }
 
   async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
@@ -289,8 +289,18 @@ export class TronWallet implements ScanWallet {
     this.tronweb.trx.sendRawTransaction(JSON.parse(transaction.data));
   }
 
-  async getAddressBalance(address: Address) {
-    const balance = await this.tronweb.trx.getBalance(address.hash);
+  async getAddressBalance(address: string) {
+    const balance = await this.tronweb.trx.getBalance(address);
     return BigInt(balance);
+  }
+
+  async getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint> {
+    const issuer = await this.getAddress(0, 0);
+    const func = 'balanceOf(address)';
+    const parameter = [{ type: 'address', value: address }];
+    const tx = await this.tronweb.transactionBuilder.triggerConstantContract(contractAddress, func, {}, parameter, issuer.hash);
+    const result = tx['constant_result'][0];
+    const decoded = this.tronweb.utils.abi.decodeParams([], ['uint256'], `0x${result}`);
+    return decoded[0].toBigInt();
   }
 }

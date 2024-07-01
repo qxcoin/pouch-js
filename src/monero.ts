@@ -177,10 +177,15 @@ export class MoneroWallet implements SyncWallet {
     await wallet.close();
   }
 
-  async getAddressBalance(address: Address): Promise<bigint> {
+  async getAddressBalance(address: string): Promise<bigint> {
     const wallet = await this.getWalletFull();
-    const balance = await wallet.getBalance(address.accountIndex, address.index);
+    const addr = await wallet.getAddressIndex(address);
+    const balance = await wallet.getBalance(addr.accountIndex, addr.index);
     await wallet.close();
     return balance;
+  }
+
+  async getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint> {
+    throw new Error('Tokens are not supported by Bitcoin blockchain.');
   }
 }

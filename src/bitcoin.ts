@@ -292,8 +292,8 @@ export class BitcoinWallet implements ScanWallet {
     });
   }
 
-  async getAddressBalance(address: Address): Promise<bigint> {
-    const sh = this.addressToScriptHash(address.hash);
+  async getAddressBalance(address: string): Promise<bigint> {
+    const sh = this.addressToScriptHash(address);
     const client = this.createElectrumClient();
     await client.connect();
     await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.get_balance", "params": [sh], "id": 0 });
@@ -308,6 +308,10 @@ export class BitcoinWallet implements ScanWallet {
         else res(balance);
       });
     });
+  }
+
+  async getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint> {
+    throw new Error('Tokens are not supported by Bitcoin blockchain.');
   }
 
   private addressToScriptHash(address: string) {
