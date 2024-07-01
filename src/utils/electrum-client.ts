@@ -11,51 +11,41 @@ export class ElectrumClient {
 
   host: string;
   port: number;
-  client: net.Socket | tls.TLSSocket;
+  protocol: string;
+
+  messageParser: ElectrumMessageParser;
+
+  client: net.Socket | tls.TLSSocket | undefined;
+
   timeoutCallback: () => void = () => void(0);
   errorCallback: (e: unknown) => void = () => void(0);
   messageCallback: MessageCallback<never, never> = () => void(0);
-  messageParser: ElectrumMessageParser;
 
   constructor(host: string, port: number, protocol: string) {
     this.host = host;
     this.port = port;
-    switch (protocol) {
-      case 'tcp':
-        this.client = new net.Socket();
-        break;
-      case 'tls':
-      case 'ssl':
-        // @ts-ignore when I provide first argument, it doesn't work :|
-        this.client = new tls.TLSSocket(undefined, { rejectUnauthorized: false });
-        break;
-      default:
-        throw new Error(`Invalid protocol: ${protocol}`);
-    }
+    this.protocol = protocol;
     this.messageParser = new ElectrumMessageParser((msg: string) => {
       this.messageCallback(JSON.parse(msg));
-    });
-    this.client.setTimeout(90_000);
-    this.client.setKeepAlive(true, 0);
-    this.client.setNoDelay(true);
-    this.client.on('data', (data) => {
-      this.messageParser.run(data.toString());
-    });
-    this.client.on('timeout', () => {
-      this.timeoutCallback();
-    });
-    this.client.on('error', (e) => {
-      this.errorCallback(e);
     });
   }
 
   async connect(): Promise<void> {
-    return new Promise((res, rej) => {
-      this.client.connect(this.port, this.host, async () => {
-        await this.negotiateVersion();
-        res();
-      });
-    });
+    this.client = await this.createConnection();
+    this.initClient();
+    await this.negotiateVersion();
+  }
+
+  private async createConnection() {
+    switch (this.protocol) {
+      case 'tcp':
+        return await this.createTcpConnection();
+      case 'tls':
+      case 'ssl':
+        return await this.createTlsConnection();
+      default:
+        throw new Error(`Invalid protocol: ${this.protocol}`);
+    }
   }
 
   async negotiateVersion() {
@@ -69,6 +59,37 @@ export class ElectrumClient {
     return p;
   }
 
+  private createTcpConnection() {
+    return new Promise<net.Socket>((res, rej) => {
+      const client = net.createConnection(this.port, this.host, () => {
+        res(client);
+      });
+    });
+  }
+
+  private createTlsConnection() {
+    return new Promise<tls.TLSSocket>((res, rej) => {
+      const client = tls.connect(this.port, this.host, { rejectUnauthorized: false }, () => {
+        res(client);
+      });
+    });
+  }
+
+  private initClient() {
+    this.client?.setTimeout(90_000);
+    this.client?.setKeepAlive(true, 0);
+    this.client?.setNoDelay(true);
+    this.client?.on('data', (data) => {
+      this.messageParser.run(data.toString());
+    });
+    this.client?.on('timeout', () => {
+      this.timeoutCallback();
+    });
+    this.client?.on('error', (e) => {
+      this.errorCallback(e);
+    });
+  }
+
   onTimeout(timeoutCallback: () => void) {
     this.timeoutCallback = timeoutCallback;
   }
@@ -78,7 +99,7 @@ export class ElectrumClient {
   }
 
   async send(msg: object) {
-    this.client.write(`${JSON.stringify(msg)}\n`);
+    this.client?.write(`${JSON.stringify(msg)}\n`);
   }
 
   onMessage<ResultType = unknown, ErrorDataType = unknown>(callback: MessageCallback<ResultType, ErrorDataType>) {
@@ -86,7 +107,7 @@ export class ElectrumClient {
   }
 
   onClose(callback: () => void) {
-    this.client.on('close', callback);
+    this.client?.on('close', callback);
   }
 
   async close() {
