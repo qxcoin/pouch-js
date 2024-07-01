@@ -76,11 +76,11 @@ export class BitcoinWallet implements ScanWallet {
     const client = this.createElectrumClient();
     await client.connect();
     let height: number | undefined;
-    await client.send({ "jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "id": 0 });
     client.onMessage<BlockchainHeadersSubscribe>(async (msg) => {
       if (jsonrpc.isNotError(msg)) height = msg.result.height;
       await client.close();
     });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "id": 0 });
     return new Promise(async (res, rej) => {
       client.onClose(() => {
         if (undefined === height) rej('Failed to resolve block height.');
@@ -92,12 +92,12 @@ export class BitcoinWallet implements ScanWallet {
   async getBlockHash(height: number): Promise<string> {
     const client = this.createElectrumClient();
     await client.connect();
-    await client.send({ "jsonrpc": "2.0", "method": "blockchain.block.header", params: [height, 0], "id": 0 });
     let hash: string | undefined;
     client.onMessage<BlockchainBlockHeader>(async (msg) => {
       if (jsonrpc.isNotError(msg)) hash = bitcoinJs.Block.fromHex(msg.result).getId();
       await client.close();
     });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.block.header", params: [height, 0], "id": 0 });
     return new Promise(async (res, rej) => {
       client.onClose(() => {
         if (undefined === hash) rej('Failed to resolve block hash.');
@@ -141,9 +141,6 @@ export class BitcoinWallet implements ScanWallet {
     const client = this.createElectrumClient();
     await client.connect();
     const transactions: CoinTransaction[] = [];
-    for (const [i, h] of hashes.entries()) {
-      await client.send({ "jsonrpc": "2.0", "method": "blockchain.transaction.get", "params": [h, false], "id": i });
-    }
     let msgCount = 0;
     client.onMessage<BlockchainTransactionGet>(async (msg) => {
       if (jsonrpc.isNotError(msg))
@@ -151,6 +148,9 @@ export class BitcoinWallet implements ScanWallet {
       if (++msgCount >= hashes.length)
         await client.close();
     });
+    for (const [i, h] of hashes.entries()) {
+      await client.send({ "jsonrpc": "2.0", "method": "blockchain.transaction.get", "params": [h, false], "id": i });
+    }
     return new Promise(async (resolve, reject) => {
       client.onClose(() => {
         resolve(transactions);
@@ -278,12 +278,12 @@ export class BitcoinWallet implements ScanWallet {
     const sh = this.addressToScriptHash(address);
     const client = this.createElectrumClient();
     await client.connect();
-    await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.listunspent", "params": [sh], "id": 0 });
     const hashes: string[] = [];
     client.onMessage<BlockchainScripthashListunspent>(async (msg) => {
       if (jsonrpc.isNotError(msg)) for (const r of msg.result) hashes.push(r.tx_hash);
       await client.close();
     });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.listunspent", "params": [sh], "id": 0 });
     return new Promise((res, rej) => {
       client.onClose(async () => {
         res(await this.getTransactions(hashes));
@@ -295,12 +295,12 @@ export class BitcoinWallet implements ScanWallet {
     const sh = this.addressToScriptHash(address.hash);
     const client = this.createElectrumClient();
     await client.connect();
-    await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.get_balance", "params": [sh], "id": 0 });
     let balance: bigint | undefined = undefined;
     client.onMessage<BlockchainScripthashGetBalance>(async (msg) => {
       if (jsonrpc.isNotError(msg)) balance = BigInt(msg.result.confirmed);
       await client.close();
     });
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.get_balance", "params": [sh], "id": 0 });
     return new Promise((res, rej) => {
       client.onClose(() => {
         if (undefined === balance) rej('Failed to resolve balance.');

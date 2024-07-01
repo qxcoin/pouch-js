@@ -59,13 +59,14 @@ export class ElectrumClient {
   }
 
   async negotiateVersion() {
-    await this.send({ "jsonrpc": "2.0", "method": "server.version", "params": ["Pouch Electrum Client", "1.4"], "id": 0 });
-    return new Promise<ServerVersion>((res, rej) => {
+    const p = new Promise<ServerVersion>((res, rej) => {
       this.onMessage<ServerVersion>((msg) => {
         if (jsonrpc.isNotError(msg)) res(msg.result);
         else rej('Failed to negotiate version.');
       });
     });
+    await this.send({ "jsonrpc": "2.0", "method": "server.version", "params": ["Pouch Electrum Client", "1.4"], "id": 0 });
+    return p;
   }
 
   onTimeout(timeoutCallback: () => void) {
