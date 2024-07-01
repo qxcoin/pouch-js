@@ -3,7 +3,7 @@ import { FMT_BYTES, FMT_NUMBER, Transaction as Web3Transaction, TransactionInfo 
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
-import ERC20 from '@openzeppelin/contracts/build/contracts/ERC20.json' assert { type: 'json' };
+import ERC20 from '@openzeppelin/contracts/build/contracts/ERC20.json' with { type: 'json' };
 import {
   ScanWallet,
   Address,

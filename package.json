@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
+    "clear": "rm -rf dist",
     "test": "vitest run",
     "build": "tsc",
     "prepare": "npm run build"
