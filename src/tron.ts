@@ -1,4 +1,9 @@
-import { TronWeb, utils as tronUtils, providers as tronProviders } from "tronweb";
+import {
+  TronWeb,
+  utils as tronUtils,
+  providers as tronProviders,
+  Types as TronTypes,
+} from "tronweb";
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
@@ -14,19 +19,7 @@ import {
   Block,
   Mempool,
 } from "./wallet.js";
-import { AxiosHeaders } from "axios";
-import type {
-  SignedTransaction as TronSignedTransaction,
-  Transaction as TronTransaction,
-} from "tronweb/lib/esm/types/Transaction.js";
-import type {
-  TransferContract as TronTransferContract,
-  TriggerSmartContract as TronTriggerSmartContract,
-} from "tronweb/lib/esm/types/Contract.js";
-import type { Block as TronBlock } from "tronweb/lib/esm/types/APIResponse.js";
-import {
-  TriggerSmartContractOptions as TronTriggerSmartContractOptions,
-} from "tronweb/lib/esm/types/TransactionBuilder.js";
+import { eth } from "web3";
 
 export interface TronWalletConfig {
   provider: string,
@@ -46,7 +39,7 @@ export class TronWallet implements ScanWallet {
     this.bip32 = BIP32Factory(ecc);
     this.tronweb = new TronWeb({
       fullHost: new tronProviders.HttpProvider(this.config.provider, 16000),
-      headers: new AxiosHeaders(config.headers),
+      headers: config.headers,
     });
   }
 
@@ -94,7 +87,7 @@ export class TronWallet implements ScanWallet {
     });
   }
 
-  private convertBlock(block: TronBlock): Block {
+  private convertBlock(block: TronTypes.Block): Block {
     const height: number = block['block_header']['raw_data']['number'];
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     // NOTE: for empty blocks, `block.transaction` is not present
@@ -108,8 +101,6 @@ export class TronWallet implements ScanWallet {
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
     const block = await this.tronweb.trx.getBlock(height);
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
-    // NOTE: for empty blocks, `block.transaction` is not present
-    // see: https://github.com/tronprotocol/tronweb/issues/522
     for (const tx of (block.transactions ?? [])) {
       try { transactions.push(this.convertTx(tx)) } catch {}
     }
@@ -126,7 +117,7 @@ export class TronWallet implements ScanWallet {
     return transaction;
   }
 
-  private convertTx(tx: TronTransaction): CoinTransaction | TokenTransaction {
+  private convertTx(tx: TronTypes.Transaction): CoinTransaction | TokenTransaction {
     if (this.isTokenTx(tx)) {
       return this.convertTokenTx(tx);
     } else if (this.isCoinTx(tx)) {
@@ -136,17 +127,17 @@ export class TronWallet implements ScanWallet {
     }
   }
 
-  private isCoinTx(tx: TronTransaction): tx is TronTransaction<TronTransferContract> {
+  private isCoinTx(tx: TronTypes.Transaction): tx is TronTypes.Transaction<TronTypes.TransferContract> {
     const contract = tx.raw_data.contract[0];
     return contract?.type === 'TransferContract';
   }
 
-  private isTokenTx(tx: TronTransaction): tx is TronTransaction<TronTriggerSmartContract> {
+  private isTokenTx(tx: TronTypes.Transaction): tx is TronTypes.Transaction<TronTypes.TriggerSmartContract> {
     const contract = tx.raw_data.contract[0];
     return contract?.type === 'TriggerSmartContract';
   }
 
-  private convertCoinTx(tx: TronTransaction<TronTransferContract>) {
+  private convertCoinTx(tx: TronTypes.Transaction<TronTypes.TransferContract>) {
     const contract = tx.raw_data.contract[0];
     if (undefined === contract) throw new Error();
     const value = contract.parameter.value;
@@ -155,7 +146,7 @@ export class TronWallet implements ScanWallet {
     return new CoinTransaction(tx.txID, tx.raw_data_hex, inputs, outputs);
   }
 
-  private convertTokenTx(tx: TronTransaction<TronTriggerSmartContract>): TokenTransaction {
+  private convertTokenTx(tx: TronTypes.Transaction<TronTypes.TriggerSmartContract>): TokenTransaction {
     const contract = tx.raw_data.contract[0];
     if (undefined === contract) throw new Error();
     const value = contract.parameter.value;
@@ -166,11 +157,20 @@ export class TronWallet implements ScanWallet {
     if (method !== 'a9059cbb') {
       throw new Error(`Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
     }
-    const decoded = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
+    // const decoded = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
+    const decoded = this.decodeParams(value.data);
     const from = this.encodeAddress(value.owner_address);
-    const to = this.encodeAddress(decoded[0].toString());
+    const to = this.encodeAddress(decoded[0]);
     const contractAddress = this.encodeAddress(value.contract_address);
-    return new TokenTransaction(tx.txID, tx.raw_data_hex, from, to, contractAddress, decoded[1].toBigInt());
+    return new TokenTransaction(tx.txID, tx.raw_data_hex, from, to, contractAddress, decoded[1]);
+  }
+
+  // see: https://github.com/tronprotocol/tronweb/issues/540
+  private decodeParams(data: string): [string, bigint] {
+    const d = eth.abi.decodeParameters(['address', 'uint256'], `0x${data.slice(8)}`);
+    const addr = tronUtils.address.ADDRESS_PREFIX + (d[0] as string).slice(2).toLowerCase();
+    const value = d[1] as bigint;
+    return [addr, value];
   }
 
   async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
@@ -178,7 +178,7 @@ export class TronWallet implements ScanWallet {
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
-  private async createTronSignedTransaction(from: Address, to: string, value: bigint): Promise<TronSignedTransaction> {
+  private async createTronSignedTransaction(from: Address, to: string, value: bigint): Promise<TronTypes.SignedTransaction> {
     const tx = await this.tronweb.transactionBuilder.sendTrx(to, Number(value), from.hash);
     return await this.tronweb.trx.sign(tx, from.privateKey.toString('hex'));
   }
@@ -209,7 +209,7 @@ export class TronWallet implements ScanWallet {
     return Number(lastPrice);
   }
 
-  private estimateBandwidth(signedTx: TronSignedTransaction) {
+  private estimateBandwidth(signedTx: TronTypes.SignedTransaction) {
     const DATA_HEX_PROTOBUF_EXTRA = 3;
     const MAX_RESULT_SIZE_IN_TX = 64;
     const A_SIGNATURE = 67;
@@ -259,10 +259,10 @@ export class TronWallet implements ScanWallet {
     return estimateEnergy.energy_required;
   }
 
-  private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, feeLimit?: bigint): Promise<TronSignedTransaction> {
+  private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, feeLimit?: bigint): Promise<TronTypes.SignedTransaction> {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value: Number(value) }];
-    const options: TronTriggerSmartContractOptions = {};
+    const options: TronTypes.TriggerSmartContractOptions = {};
     if (undefined !== feeLimit) options.feeLimit = Number(feeLimit);
     const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, options, parameter, from.hash);
     return await this.tronweb.trx.sign(tx.transaction, from.privateKey.toString('hex'));
@@ -301,6 +301,6 @@ export class TronWallet implements ScanWallet {
     const tx = await this.tronweb.transactionBuilder.triggerConstantContract(contractAddress, func, {}, parameter, issuer.hash);
     const result = tx['constant_result'][0];
     const decoded = this.tronweb.utils.abi.decodeParams([], ['uint256'], `0x${result}`);
-    return decoded[0].toBigInt();
+    return decoded[0];
   }
 }

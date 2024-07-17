@@ -1,3 +1,5 @@
 /node_modules
 /dist
 /storage
+.env
+.env.test

@@ -6,7 +6,7 @@ function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
   return new TronWallet(mnemonic, network, {
     provider: 'testnet' === network ? 'https://api.shasta.trongrid.io' : 'https://api.trongrid.io',
-    headers: { 'TRON-PRO-API-KEY': 'f1c685a8-97ee-4a4f-8475-381fc2a4278b' }
+    headers: { 'TRON-PRO-API-KEY': process.env.TRONGRID_API_KEY! }
   });
 }
 
@@ -42,6 +42,17 @@ test('can retrieve a token transaction', async () => {
   expect(tx.to).toBe('TYBuQy5rduHQn4rtW5auSW3W3waTpGph6E');
   expect(tx.contractAddress).toBe('TZAMowU7LPttMHV4ba9osJSmYw6i6erC2d');
   expect(tx.value).toBe(1000000n);
+});
+
+// see: https://github.com/tronprotocol/tronweb/issues/540
+test('can retrieve a token transaction without value exceeds width error', async () => {
+  const wallet = createWallet('mainnet');
+  const tx = await wallet.getTransaction('7e45745226085334dd91ce42a3beb76dcb3b6f164f5ec558a49abac8ba1885a0');
+  if (!(tx instanceof TokenTransaction)) return fail("Didn't get coin transaction!");
+  expect(tx.from).toBe('TGS2YuigrghENqQqCMP6p1ktbxnvo33LGg');
+  expect(tx.to).toBe('TLKopop7gJJCcjrAL6jis1Scx6BSniPpbo');
+  expect(tx.contractAddress).toBe('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
+  expect(tx.value).toBe(2000000n);
 });
 
 test('can create a coin transaction', async () => {

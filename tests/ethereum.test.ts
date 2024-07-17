@@ -5,7 +5,7 @@ import { expect, test, vi } from 'vitest';
 function createWallet(network: 'mainnet' | 'testnet') {
   const mnemonic = 'radar blur cabbage chef fix engine embark joy scheme fiction master release';
   return new EthereumWallet(mnemonic, network, {
-    provider: 'testnet' === network ? 'https://sepolia.infura.io/v3/ef48b777be6b4d2bb16a9197685eb698' : 'https://mainnet.infura.io/v3/ef48b777be6b4d2bb16a9197685eb698',
+    provider: 'testnet' === network ? process.env.ETHEREUM_PROVIDER_TESTNET! : process.env.ETHEREUM_PROVIDER_MAINNET!,
   });
 }
 
