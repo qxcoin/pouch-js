@@ -108,9 +108,13 @@ export class BitcoinWallet implements ScanWallet {
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/84'/0'").deriveHardened(accountIndex).derive(0).derive(index);
-    if (undefined === node.privateKey) throw new Error("Private key doesn't exist on derived BIP32 node.");
+    if (undefined === node.privateKey) {
+      throw new Error("Private key doesn't exist on derived BIP32 node.");
+    }
     const p = bitcoinJs.payments.p2wpkh({ network: this.network, pubkey: node.publicKey });
-    if (undefined === p.address) throw new Error("Failed to generate address.");
+    if (undefined === p.address) {
+      throw new Error("Failed to generate address.");
+    }
     return new Address(index, accountIndex, p.address, node.privateKey);
   }
 
@@ -161,7 +165,9 @@ export class BitcoinWallet implements ScanWallet {
 
   async getTransaction(hash: string): Promise<CoinTransaction> {
     const transactions = await this.getTransactions([hash]);
-    if (undefined === transactions[0]) throw new Error(`Failed to get transaction ${hash}.`);
+    if (undefined === transactions[0]) {
+      throw new Error(`Transaction [${hash}] not found.`);
+    }
     return transactions[0];
   }
 
@@ -198,7 +204,9 @@ export class BitcoinWallet implements ScanWallet {
     const result = await this.request<GetRawTransactionVerbose>('getrawtransaction', [txId, true]);
     const tx = bitcoinJs.Transaction.fromHex(result.hex);
     const output = tx.outs[inp.index];
-    if (undefined === output) throw new Error('Failed to extract address from output.');
+    if (undefined === output) {
+      throw new Error('Failed to extract address from input output.');
+    }
     return this.extractAddressFromOutput(output);
   }
 
