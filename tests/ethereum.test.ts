@@ -40,14 +40,14 @@ test('can retrieve a token transaction', async () => {
   const tx = await wallet.getTransaction('0x946ae012ce77cbf7bfbf91efece0d0153c50328741240a54aed1e85c8e5c01ee');
   if (!(tx instanceof TokenTransaction)) return fail("Didn't get token transaction!");
   expect(tx.from).toBe('0x27686364d256efed49d5750f5c3fc70bac874682');
-  expect(tx.to).toBe('0xf8Fe8ca234e9C060109CCAb2f1E4c09F99fac617');
+  expect(tx.to).toBe('0xf8fe8ca234e9c060109ccab2f1e4c09f99fac617');
   expect(tx.value).toBe(500000000000n);
 });
 
 test('can create a coin transaction', async () => {
   const wallet = createWallet('testnet');
-  const from = new Address(0, 0, '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
-  const rawTx = await wallet.createTransaction(from, '0xEb64657BDcab5087ca2627065317e39AAcaF67B4', 1n);
+  const from = new Address(0, 0, '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
+  const rawTx = await wallet.createTransaction(from, '0xeb64657bdcab5087ca2627065317e39aacaf67b4', 1n);
   expect(rawTx.hash).toBeDefined();
   expect(rawTx.data).toBeDefined();
 });
@@ -57,8 +57,8 @@ test('can create a coin transaction', async () => {
 // see: https://github.com/bokkypoobah/WeenusTokenFaucet
 test('can create a token transaction', async () => {
   const wallet = createWallet('testnet');
-  const from = new Address(0, 0, '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
-  const rawTx = await wallet.createTokenTransaction('0x7439E9Bb6D8a84dd3A23fe621A30F95403F87fB9', from, '0xEb64657BDcab5087ca2627065317e39AAcaF67B4', 1000000n);
+  const from = new Address(0, 0, '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
+  const rawTx = await wallet.createTokenTransaction('0x7439E9Bb6D8a84dd3A23fe621A30F95403F87fB9', from, '0xeb64657bdcab5087ca2627065317e39aacaf67b4', 1000000n);
   expect(rawTx.hash).toBeDefined();
   expect(rawTx.data).toBeDefined();
 });
@@ -78,28 +78,28 @@ test('can retrieve transactions of a block range', async () => {
 
 test('can retrieve address balance', async () => {
   const wallet = createWallet('testnet');
-  const addr = '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9';
+  const addr = '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9';
   const balance = await wallet.getAddressBalance(addr);
   expect(typeof balance).toBe('bigint');
 });
 
 test('can retrieve address token balance', async () => {
   const wallet = createWallet('testnet');
-  const addr = '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9';
+  const addr = '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9';
   const balance = await wallet.getAddressTokenBalance('0x7439E9Bb6D8a84dd3A23fe621A30F95403F87fB9', addr);
   expect(typeof balance).toBe('bigint');
 });
 
 test('can estimate transaction fee', async () => {
   const wallet = createWallet('testnet');
-  const from = new Address(0, 0, '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
-  const fee = await wallet.estimateTransactionFee(from, '0xEb64657BDcab5087ca2627065317e39AAcaF67B4', 1n);
+  const from = new Address(0, 0, '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
+  const fee = await wallet.estimateTransactionFee(from, '0xeb64657bdcab5087ca2627065317e39aacaf67b4', 1n);
   expect(typeof fee).toBe('bigint');
 });
 
 test('can estimate token transaction fee', async () => {
   const wallet = createWallet('testnet');
-  const from = new Address(0, 0, '0xaC39b311DCEb2A4b2f5d8461c1cdaF756F4F7Ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
-  const fee = await wallet.estimateTokenTransactionFee('0x7439E9Bb6D8a84dd3A23fe621A30F95403F87fB9', from, '0xEb64657BDcab5087ca2627065317e39AAcaF67B4', 1n);
+  const from = new Address(0, 0, '0xac39b311dceb2a4b2f5d8461c1cdaf756f4f7ae9', Buffer.from('b96e9ccb774cc33213cbcb2c69d3cdae17b0fe4888a1ccd343cbd1a17fd98b18', 'hex'));
+  const fee = await wallet.estimateTokenTransactionFee('0x7439E9Bb6D8a84dd3A23fe621A30F95403F87fB9', from, '0xeb64657bdcab5087ca2627065317e39aacaf67b4', 1n);
   expect(typeof fee).toBe('bigint');
 });

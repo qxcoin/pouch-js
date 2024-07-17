@@ -100,8 +100,9 @@ export class EthereumWallet implements ScanWallet {
     }
     const value = this.web3.utils.toBigInt(tx.value);
     const hash = this.web3.utils.toHex(tx.hash);
+    const from = tx.from;
     const to = tx.to;
-    const inputs: TransactionInput[] = [new TransactionInput(0, async () => tx.from)];
+    const inputs: TransactionInput[] = [new TransactionInput(0, async () => from)];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, value, async () => to)];
     return new CoinTransaction(hash, JSON.stringify(tx), inputs, outputs);
   }
@@ -119,7 +120,7 @@ export class EthereumWallet implements ScanWallet {
     const hash = this.web3.utils.toHex(tx.hash);
     const data = input.slice(10);
     const params = this.web3.eth.abi.decodeParameters(['address', 'uint256'], data);
-    const to = params[0] as string;
+    const to = (params[0] as string).toLowerCase(); // we should lowercase the address, hex strings are case-insensitive
     const value = params[1] as bigint;
     return new TokenTransaction(hash, JSON.stringify(tx), tx.from, to, tx.to, value);
   }
