@@ -109,7 +109,7 @@ export class EthereumWallet implements ScanWallet {
 
   private convertCoinTx(tx: Web3TransactionInfo): CoinTransaction {
     if (undefined === tx.value || undefined === tx.hash || null == tx.to) {
-      throw new Error('Transaction is invalid.');
+      throw new UnsupportedTransactionError('Transaction has not enough data.');
     }
     const value = this.web3.utils.toBigInt(tx.value);
     const hash = this.web3.utils.toHex(tx.hash);
@@ -122,7 +122,7 @@ export class EthereumWallet implements ScanWallet {
 
   private convertTokenTx(tx: Web3TransactionInfo): TokenTransaction {
     if (undefined === tx.value || undefined === tx.hash || undefined === tx.input || null == tx.to) {
-      throw new Error('Transaction is invalid.');
+      throw new UnsupportedTransactionError('Transaction has not enough data.');
     }
     const input = this.web3.utils.toHex(tx.input);
     const method = input.slice(2, 10);
