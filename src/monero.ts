@@ -99,16 +99,28 @@ export class MoneroWallet implements SyncWallet {
       }
       override async onOutputReceived(output: moneroTs.MoneroOutputWallet) {
         if (undefined !== listener.onTransaction) {
-          const tx = await self.getMoneroTx(output.getTx().getHash());
-          listener.onTransaction(self.convertTx(tx), tx.getHeight());
+          listener.onTransaction(self.convertOutputWallet(output), output.getTx().getHeight());
         }
       }
     }
   }
 
-  async sync(listener: Partial<SyncWalletListener> = {}) {
+  private convertOutputWallet(output: moneroTs.MoneroOutputWallet) {
+    const tx = output.getTx();
+    // it is not possible to read inputs from XMR blockchain, they are hidden
+    const inputs: TransactionInput[] = [];
+    const outputs: TransactionOutput[] = [];
+    outputs.push(new TransactionOutput(0, output.getAmount(), async () => {
+      return (await this.getAddress(output.getSubaddressIndex(), output.getAccountIndex())).hash;
+    }));
+    // NOTE: it seems `getFullHex` is undefined.
+    // see: https://github.com/woodser/monero-ts/issues/214
+    return new CoinTransaction(tx.getHash(), tx.getFullHex() ?? '', inputs, outputs);
+  }
+
+  async sync(listener: Partial<SyncWalletListener>, startHeight?: number) {
     const wallet = await this.getWalletFull();
-    await wallet.sync(this.createMoneroListener(listener));
+    await wallet.sync(this.createMoneroListener(listener), startHeight);
     await wallet.close(true);
   }
 
@@ -125,10 +137,10 @@ export class MoneroWallet implements SyncWallet {
 
   async getTransaction(hash: string): Promise<CoinTransaction> {
     const tx = await this.getMoneroTx(hash);
-    return this.convertTx(tx);
+    return this.convertTxWallet(tx);
   }
 
-  private convertTx(tx: moneroTs.MoneroTxWallet): CoinTransaction {
+  private convertTxWallet(tx: moneroTs.MoneroTxWallet): CoinTransaction {
     // it is not possible to read inputs from XMR blockchain, they are hidden
     const inputs: TransactionInput[] = [];
     const outputs: TransactionOutput[] = [];

@@ -102,7 +102,7 @@ export interface SyncWallet {
   getLastBlockHeight(): Promise<number>;
   getSyncedBlockHeight(): Promise<number>;
   getAddress(index: number, accountIndex: number): Promise<Address>;
-  sync(listener: Partial<SyncWalletListener>): Promise<void>;
+  sync(listener: Partial<SyncWalletListener>, startHeight?: number): Promise<void>;
   getTransactions(hashes: string[]): Promise<Array<CoinTransaction | TokenTransaction>>;
   getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction>;
   createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction>;
