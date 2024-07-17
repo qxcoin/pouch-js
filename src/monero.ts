@@ -89,16 +89,16 @@ export class MoneroWallet implements SyncWallet {
     return addr;
   }
 
-  private createMoneroListener(listener: Partial<SyncWalletListener>) {
+  private createMoneroListener(listener?: Partial<SyncWalletListener>) {
     const self = this;
     return new class extends moneroTs.MoneroWalletListener {
       override async onSyncProgress(height: number, startHeight: number, endHeight: number, percentDone: number, message: string) {
-        if (undefined !== listener.onProgress) {
+        if (undefined !== listener?.onProgress) {
           listener.onProgress(height);
         }
       }
       override async onOutputReceived(output: moneroTs.MoneroOutputWallet) {
-        if (undefined !== listener.onTransaction) {
+        if (undefined !== listener?.onTransaction) {
           listener.onTransaction(self.convertOutputWallet(output), output.getTx().getHeight());
         }
       }
@@ -106,6 +106,8 @@ export class MoneroWallet implements SyncWallet {
   }
 
   private convertOutputWallet(output: moneroTs.MoneroOutputWallet) {
+    // NOTE: the MoneroTxWallet we get from MoneroOutputWallet, doesn't include transfers
+    //       so we can't use `this.convertTxWallet`
     const tx = output.getTx();
     // it is not possible to read inputs from XMR blockchain, they are hidden
     const inputs: TransactionInput[] = [];
@@ -118,7 +120,7 @@ export class MoneroWallet implements SyncWallet {
     return new CoinTransaction(tx.getHash(), tx.getFullHex() ?? '', inputs, outputs);
   }
 
-  async sync(listener: Partial<SyncWalletListener>, startHeight?: number) {
+  async sync(listener?: Partial<SyncWalletListener>, startHeight?: number) {
     const wallet = await this.getWalletFull();
     await wallet.sync(this.createMoneroListener(listener), startHeight);
     await wallet.close(true);
@@ -128,15 +130,14 @@ export class MoneroWallet implements SyncWallet {
     throw new Error('This method is not supported.');
   }
 
-  private async getMoneroTx(hash: string): Promise<moneroTs.MoneroTxWallet> {
+  async getTransaction(hash: string): Promise<CoinTransaction> {
     const wallet = await this.getWalletFull();
     const tx = await wallet.getTx(hash);
+    // see: https://github.com/woodser/monero-ts/issues/221
+    if (undefined === tx) {
+      throw new Error(`Transaction [${hash}] not found.`);
+    }
     await wallet.close();
-    return tx;
-  }
-
-  async getTransaction(hash: string): Promise<CoinTransaction> {
-    const tx = await this.getMoneroTx(hash);
     return this.convertTxWallet(tx);
   }
 
@@ -175,7 +176,7 @@ export class MoneroWallet implements SyncWallet {
     return tx.getFee();
   }
 
-  createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {
+  createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
     throw new Error('Tokens are not supported by Monero blockchain.');
   }
 

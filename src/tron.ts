@@ -20,6 +20,7 @@ import {
   Mempool,
 } from "./wallet.js";
 import { eth } from "web3";
+import { UnsupportedTransactionError } from "./utils/errors.js";
 
 export interface TronWalletConfig {
   provider: string,
@@ -50,7 +51,9 @@ export class TronWallet implements ScanWallet {
 
   private decodeAddress(address: string): string {
     const addressBytes = tronUtils.crypto.decodeBase58Address(address);
-    if (false === addressBytes) throw new Error('Failed to decode address.');
+    if (false === addressBytes) {
+      throw new Error('Failed to decode address.');
+    }
     return tronUtils.code.byteArray2hexStr(addressBytes);
   }
 
@@ -62,7 +65,9 @@ export class TronWallet implements ScanWallet {
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const seed = bip39.mnemonicToSeedSync(this.mnemonic);
     const node = this.bip32.fromSeed(seed).derivePath("m/44'/195'").deriveHardened(accountIndex).derive(0).derive(index);
-    if (undefined === node.privateKey) throw new Error("Private key doesn't exist on derived BIP32 node.");
+    if (undefined === node.privateKey) {
+      throw new Error("Private key doesn't exist on derived BIP32 node.");
+    }
     const privateKeyBytes = tronUtils.code.hexStr2byteArray(node.privateKey.toString('hex'));
     const addressBytes = tronUtils.crypto.getAddressFromPriKey(privateKeyBytes);
     const acc = tronUtils.crypto.getBase58CheckAddress(addressBytes);
@@ -90,10 +95,12 @@ export class TronWallet implements ScanWallet {
   private convertBlock(block: TronTypes.Block): Block {
     const height: number = block['block_header']['raw_data']['number'];
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
-    // NOTE: for empty blocks, `block.transaction` is not present
-    // see: https://github.com/tronprotocol/tronweb/issues/522
     for (const tx of (block.transactions ?? [])) {
-      try { transactions.push(this.convertTx(tx)) } catch {}
+      try {
+        transactions.push(this.convertTx(tx))
+      } catch (e) {
+        if (!(e instanceof UnsupportedTransactionError)) throw e;
+      }
     }
     return new Block(height, transactions);
   }
@@ -102,7 +109,11 @@ export class TronWallet implements ScanWallet {
     const block = await this.tronweb.trx.getBlock(height);
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     for (const tx of (block.transactions ?? [])) {
-      try { transactions.push(this.convertTx(tx)) } catch {}
+      try {
+        transactions.push(this.convertTx(tx))
+      } catch (e) {
+        if (!(e instanceof UnsupportedTransactionError)) throw e;
+      }
     }
     return transactions;
   }
@@ -123,7 +134,7 @@ export class TronWallet implements ScanWallet {
     } else if (this.isCoinTx(tx)) {
       return this.convertCoinTx(tx);
     } else {
-      throw new Error(`Transaction [${tx.txID}] is not supported.`);
+      throw new UnsupportedTransactionError(tx.txID);
     }
   }
 
@@ -139,7 +150,9 @@ export class TronWallet implements ScanWallet {
 
   private convertCoinTx(tx: TronTypes.Transaction<TronTypes.TransferContract>) {
     const contract = tx.raw_data.contract[0];
-    if (undefined === contract) throw new Error();
+    if (undefined === contract) {
+      throw new Error('Transaction is invalid.');
+    }
     const value = contract.parameter.value;
     const inputs: TransactionInput[] = [new TransactionInput(0, async () => this.encodeAddress(value.owner_address))];
     const outputs: TransactionOutput[] = [new TransactionOutput(0, BigInt(value.amount), async () => this.encodeAddress(value.to_address))];
@@ -152,10 +165,12 @@ export class TronWallet implements ScanWallet {
     const value = contract.parameter.value;
     // we only support transfer (a9059cbb) method for now
     // so the contract data cannot be empty and the first 8 characters should be "a9059cbb"
-    if (!value.data) throw new Error(`Transaction [${tx.txID}] has empty data.`);
+    if (!value.data) {
+      throw new UnsupportedTransactionError(tx.txID, `Transaction [${tx.txID}] has empty data.`);
+    }
     const method = value.data.slice(0, 8);
     if (method !== 'a9059cbb') {
-      throw new Error(`Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
+      throw new UnsupportedTransactionError(tx.txID, `Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
     }
     // const decoded = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
     const decoded = this.decodeParams(value.data);

@@ -1,5 +1,10 @@
 import { Web3 } from "web3";
-import { FMT_BYTES, FMT_NUMBER, Transaction as Web3Transaction, TransactionInfo as Web3TransactionInfo } from "web3-types";
+import {
+  FMT_BYTES,
+  FMT_NUMBER,
+  Transaction as Web3Transaction,
+  TransactionInfo as Web3TransactionInfo,
+} from "web3-types";
 import { BIP32Factory, BIP32API } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import * as bip39 from 'bip39';
@@ -16,6 +21,7 @@ import {
   Mempool,
   Block,
 } from "./wallet.js";
+import { UnsupportedTransactionError } from "./utils/errors.js";
 
 export type ContractAddress = string;
 
@@ -44,10 +50,12 @@ export class EthereumWallet implements ScanWallet {
 
   async getAddress(index: number, accountIndex: number): Promise<Address> {
     const node = this.bip32.fromSeed(bip39.mnemonicToSeedSync(this.mnemonic)).derivePath("m/44'/60'").deriveHardened(accountIndex).derive(0).derive(index);
-    if (undefined === node.privateKey) throw new Error("Private key doesn't exist on derived BIP32 node.");
+    if (undefined === node.privateKey) {
+      throw new Error("Private key doesn't exist on derived BIP32 node.");
+    }
     const acc = this.web3.eth.accounts.privateKeyToAccount(node.privateKey);
-    // we should lowercase the address, because it will be lowercased on transactions
     // hex strings are case-insensitive
+    // so we should lowercase the address everywhere to prevent errors when comparing
     return new Address(index, accountIndex, acc.address.toLowerCase(), node.privateKey);
   }
 
@@ -69,8 +77,13 @@ export class EthereumWallet implements ScanWallet {
     // NOTE: for empty blocks, `block.transaction` is not present
     // see: https://github.com/tronprotocol/tronweb/issues/522
     for (const tx of (block.transactions ?? [])) {
-      if (typeof tx === 'string') continue; // `getBlock` can return both `string` and `TransactionInfo`, we only want `TransactionInfo`
-      try { transactions.push(this.convertTx(tx)) } catch {}
+      // `getBlock` can return both `string` and `TransactionInfo`, we only want `TransactionInfo`
+      if (typeof tx === 'string') continue;
+      try {
+        transactions.push(this.convertTx(tx));
+      } catch (e) {
+        if (!(e instanceof UnsupportedTransactionError)) throw e;
+      }
     }
     return transactions;
   }
@@ -115,12 +128,12 @@ export class EthereumWallet implements ScanWallet {
     const method = input.slice(2, 10);
     // we only support transfer (a9059cbb) method for now
     if (method !== 'a9059cbb') {
-      throw new Error(`Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
+      throw new UnsupportedTransactionError(tx.hash.toString(), `Transaction [${tx.hash}] does not trigger the transfer (a9059cbb) contract method.`);
     }
     const hash = this.web3.utils.toHex(tx.hash);
     const data = input.slice(10);
     const params = this.web3.eth.abi.decodeParameters(['address', 'uint256'], data);
-    const to = (params[0] as string).toLowerCase(); // we should lowercase the address, hex strings are case-insensitive
+    const to = (params[0] as string).toLowerCase(); // hex strings are case-insensitive, so we should lowercase the address everywhere
     const value = params[1] as bigint;
     return new TokenTransaction(hash, JSON.stringify(tx), tx.from, to, tx.to, value);
   }
