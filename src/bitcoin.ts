@@ -279,7 +279,7 @@ export class BitcoinWallet implements ScanWallet {
     return txSizeBytes * feePerByte;
   }
 
-  private async getTransactionFeePerKb(): Promise<bigint> {
+  async getTransactionFeePerKb(): Promise<bigint> {
     const client = this.createElectrumClient();
     await client.connect();
     let fee: bigint | undefined;
@@ -332,7 +332,7 @@ export class BitcoinWallet implements ScanWallet {
     await client.send({ "jsonrpc": "2.0", "method": "blockchain.scripthash.get_balance", "params": [sh], "id": 0 });
     let balance: bigint | undefined = undefined;
     client.onMessage<BlockchainScripthashGetBalance>(async (msg) => {
-      if (jsonrpc.isNotError(msg)) balance = BigInt(msg.result.confirmed);
+      if (jsonrpc.isNotError(msg)) balance = BigInt(msg.result.confirmed) + BigInt(msg.result.unconfirmed);
       await client.close();
     });
     return new Promise((res, rej) => {
