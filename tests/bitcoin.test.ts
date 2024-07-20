@@ -8,7 +8,6 @@ function createWallet(network: 'mainnet' | 'testnet') {
   return new BitcoinWallet(mnemonic, network, {
     server: 'testnet' === network ? process.env.BITCOIN_SERVER_TESTNET! : process.env.BITCOIN_SERVER_MAINNET!,
     electrumServer: 'testnet' === network ? process.env.BITCOIN_ELECTRUM_SERVER_TESTNET! : process.env.BITCOIN_ELECTRUM_SERVER_MAINNET!,
-    fee: 1n,
   });
 }
 
@@ -31,7 +30,7 @@ test('can create valid address', async () => {
 test('can create transaction for P2PKH', async () => {
   const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
-  const rawTx = await wallet.createTransaction(from, 'n2gTQ45JG7RzfjafW4MVvh7EseVX5VGHTs', 1n);
+  const rawTx = await wallet.createTransaction(from, 'n2gTQ45JG7RzfjafW4MVvh7EseVX5VGHTs', 1n, 1n);
   expect(rawTx.hash).toBe('ddb7f5becb49aaa7986617401623b876fdf6afb91b392f896024e1f3c5ae6fdc');
   expect(rawTx.data).toBe('02000000000101684a66085ec820c03c10eb9ea8c951f1aa27b531030d0318654868ba208a4d8c0000000000ffffffff0201000000000000001976a914e826adf04887f3e3e2d3b8b40ff12596b80b301d88acdb42000000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d02483045022100ee958c8a7e0d71b8fbef3eb5f32891cb975048aae2284ce6c05767ae96d54d1102203f1d9891b489fb7fbd0ff86da7e0c878336c3da76dfae44e50144ef56c7a7ca7012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
 });
@@ -39,7 +38,7 @@ test('can create transaction for P2PKH', async () => {
 test('can create transaction for P2WPKH', async () => {
   const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
-  const rawTx = await wallet.createTransaction(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', 1n);
+  const rawTx = await wallet.createTransaction(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', 1n, 1n);
   expect(rawTx.hash).toBe('68edfed20bdeea27936de12c1800cb9ca21f080411c1666254d2757a1abf9c57');
   expect(rawTx.data).toBe('02000000000101684a66085ec820c03c10eb9ea8c951f1aa27b531030d0318654868ba208a4d8c0000000000ffffffff0201000000000000001600145e5406ef5525b6c9483d71b39669116fbda1528fdb42000000000000160014e826adf04887f3e3e2d3b8b40ff12596b80b301d0247304402201529537f78408303438f19a926494a9e67170f62b14014e30b757e55d63fa97902201efe6a08ac94c64ec08be71aeb15de9cf914a414be56d231bbe3030c945b4260012102c3d462c3b9aaf9e5dc540cbbd4d4a75346ce8ef9e3e124142c41b517950d3a2a00000000');
 });
@@ -141,4 +140,11 @@ test('can retrieve address balance', async () => {
   const addr = 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m';
   const balance = await wallet.getAddressBalance(addr);
   expect(typeof balance).toBe('bigint');
+});
+
+test('can estimate transaction fee', async () => {
+  const wallet = createWallet('testnet');
+  const from = new Address(0, 0, 'tb1qaqn2muzgsle78cknhz6qluf9j6uqkvqas95u2m', Buffer.from('2a38cfc8025dc970ca18537527ab78f838fb0c2159c12c8cce1c8afa0fc79174', 'hex'));
+  const fee = await wallet.estimateTransactionFee(from, 'tb1qte2qdm64ykmvjjpawxeev6g3d776z5502l4yj2', 1n);
+  expect(typeof fee).toBe('bigint');
 });

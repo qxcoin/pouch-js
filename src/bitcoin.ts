@@ -18,6 +18,7 @@ import { ElectrumClient } from "./utils/electrum-client.js";
 import * as jsonrpc from "./utils/jsonrpc.js";
 import type {
   BlockchainBlockHeader,
+  BlockchainEstimateFee,
   BlockchainHeadersSubscribe,
   BlockchainScripthashGetBalance,
   BlockchainScripthashListunspent,
@@ -29,7 +30,6 @@ import { ofetch } from "ofetch";
 export interface BitcoinWalletConfig {
   server: string,
   electrumServer: string,
-  fee: bigint,
 }
 
 export class BitcoinWallet implements ScanWallet {
@@ -225,7 +225,7 @@ export class BitcoinWallet implements ScanWallet {
     }
   }
 
-  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
+  async createTransaction(from: Address, to: string, value: bigint, fee: bigint = 1000n): Promise<RawTransaction> {
     const spending = await this.getAddressUnspent(from.hash);
     const prevOuts: Array<{ tx: CoinTransaction, index: number }> = [];
     for (const tx of spending) {
@@ -241,7 +241,7 @@ export class BitcoinWallet implements ScanWallet {
       var aValue = a.tx.outputs[a.index]?.value ?? 0n;
       return Number(aValue - bValue);
     });
-    const totalRequiredValue = value + this.config.fee;
+    const totalRequiredValue = value + fee;
     let totalAvailableValue = 0n;
     let requiredPrevOuts: typeof prevOuts = [];
     for (const po of prevOuts) {
@@ -268,7 +268,32 @@ export class BitcoinWallet implements ScanWallet {
   }
 
   async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
-    return this.config.fee;
+    const raw = await this.createTransaction(from, to, value, 0n);
+    return await this.getTransactionFee(raw);
+  }
+
+  private async getTransactionFee(raw: RawTransaction): Promise<bigint> {
+    const txSizeBytes = BigInt(raw.data.length) / 2n;
+    const feePerKb = await this.getTransactionFeePerKb();
+    const feePerByte = feePerKb / 1000n;
+    return txSizeBytes * feePerByte;
+  }
+
+  private async getTransactionFeePerKb(): Promise<bigint> {
+    const client = this.createElectrumClient();
+    await client.connect();
+    let fee: bigint | undefined;
+    await client.send({ "jsonrpc": "2.0", "method": "blockchain.estimatefee", "params": [6], "id": 0 });
+    client.onMessage<BlockchainEstimateFee>(async (msg) => {
+      if (jsonrpc.isNotError(msg)) fee = msg.result < 0 ? 1000n : BigInt((msg.result * 100000000).toFixed(0));
+      await client.close();
+    });
+    return new Promise(async (res, rej) => {
+      client.onClose(() => {
+        if (undefined === fee) rej('Failed to estimate fee.');
+        else res(fee);
+      });
+    });
   }
 
   createTokenTransaction(_contractAddress: string, _from: Address, _to: string, _value: bigint): Promise<RawTransaction> {

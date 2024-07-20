@@ -20,3 +20,5 @@ export type BlockchainHeadersSubscribe = {
 export type BlockchainBlockHeader = string;
 
 export type BlockchainTransactionGet = string;
+
+export type BlockchainEstimateFee = number;
