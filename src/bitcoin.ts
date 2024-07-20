@@ -226,6 +226,11 @@ export class BitcoinWallet implements ScanWallet {
   }
 
   async createTransaction(from: Address, to: string, value: bigint, fee: bigint = 1000n): Promise<RawTransaction> {
+    const tx = await this.createBtcJsTransaction(from, to, value, fee);
+    return new RawTransaction(tx.getId(), tx.toHex());
+  }
+
+  async createBtcJsTransaction(from: Address, to: string, value: bigint, fee: bigint = 1000n): Promise<bitcoinJs.Transaction> {
     const spending = await this.getAddressUnspent(from.hash);
     const prevOuts: Array<{ tx: CoinTransaction, index: number }> = [];
     for (const tx of spending) {
@@ -263,20 +268,15 @@ export class BitcoinWallet implements ScanWallet {
     }
     psbt.signAllInputs(this.ecPair.fromPrivateKey(from.privateKey));
     psbt.finalizeAllInputs();
-    const tx = psbt.extractTransaction();
-    return new RawTransaction(tx.getId(), tx.toHex());
+    return psbt.extractTransaction();
   }
 
   async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
-    const raw = await this.createTransaction(from, to, value, 0n);
-    return await this.getTransactionFee(raw);
-  }
-
-  private async getTransactionFee(raw: RawTransaction): Promise<bigint> {
-    const txSizeBytes = BigInt(raw.data.length) / 2n;
+    const tx = await this.createBtcJsTransaction(from, to, value, 0n);
+    const txVirtualSize = BigInt(tx.virtualSize());
     const feePerKb = await this.getTransactionFeePerKb();
     const feePerByte = feePerKb / 1000n;
-    return txSizeBytes * feePerByte;
+    return txVirtualSize * feePerByte;
   }
 
   async getTransactionFeePerKb(): Promise<bigint> {
