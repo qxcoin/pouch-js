@@ -125,5 +125,5 @@ test('can estimate token transaction fee', async () => {
   const wallet = createWallet('testnet');
   const from = new Address(0, 0, 'TAKu6XAtzZqUdVXh5k4qZZ7LwNeyJjqVgi', Buffer.from('ce11c0f1778d6ad49bbe049b34c5963138a277fd25f4a9ea6b7e7eb8d506059b', 'hex'));
   const fee = await wallet.estimateTokenTransactionFee('TZAMowU7LPttMHV4ba9osJSmYw6i6erC2d', from, 'TYBuQy5rduHQn4rtW5auSW3W3waTpGph6E', 1n);
-  expect(fee).toBe(6148380n);
+  expect(fee).toBe(5465040n);
 });

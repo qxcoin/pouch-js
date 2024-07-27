@@ -270,8 +270,9 @@ export class TronWallet implements ScanWallet {
   private async estimateEnergy(contractAddress: string, from: Address, to: string, value: bigint) {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value: Number(value) }];
-    const estimateEnergy = await this.tronweb.transactionBuilder.estimateEnergy(contractAddress, func, {}, parameter, from.hash);
-    return estimateEnergy.energy_required;
+    const estimateEnergy = await this.tronweb.transactionBuilder.triggerConstantContract(contractAddress, func, {}, parameter, from.hash);
+    if (!estimateEnergy.energy_used) throw new Error('Failed to estimate energy.');
+    return estimateEnergy.energy_used;
   }
 
   private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, feeLimit?: bigint): Promise<TronTypes.SignedTransaction> {
