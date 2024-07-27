@@ -306,7 +306,7 @@ export class TronWallet implements ScanWallet {
   }
 
   async getAddressBalance(address: string) {
-    const balance = await this.tronweb.trx.getBalance(address);
+    const balance = await this.tronweb.trx.getUnconfirmedBalance(address);
     return BigInt(balance);
   }
 
