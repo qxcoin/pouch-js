@@ -193,7 +193,7 @@ export class MoneroWallet implements SyncWallet {
   async getAddressBalance(address: string): Promise<bigint> {
     const wallet = await this.getWalletFull();
     const addr = await wallet.getAddressIndex(address);
-    const balance = await wallet.getBalance(addr.accountIndex, addr.index);
+    const balance = await wallet.getUnlockedBalance(addr.accountIndex, addr.index);
     await wallet.close();
     return balance;
   }
