@@ -154,7 +154,7 @@ export class MoneroWallet implements SyncWallet {
     return new CoinTransaction(tx.getHash(), tx.getFullHex() ?? '', inputs, outputs);
   }
 
-  private async createMoneroTx(from: Address, to: string, value: bigint): Promise<moneroTs.MoneroTxWallet> {
+  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
     const wallet = await this.getWalletFull();
     const tx = await wallet.createTx({
       address: to,
@@ -163,16 +163,21 @@ export class MoneroWallet implements SyncWallet {
       subaddressIndex: from.index,
     });
     await wallet.close();
-    return tx;
-  }
-
-  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
-    const tx = await this.createMoneroTx(from, to, value);
     return new RawTransaction(tx.getHash(), tx.getMetadata());
   }
 
   async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
-    const tx = await this.createMoneroTx(from, to, value);
+    const wallet = await this.getWalletFull();
+    const tx = await wallet.createTx({
+      address: to,
+      amount: value,
+      accountIndex: from.accountIndex,
+      subaddressIndex: from.index,
+      // without this property we won't be able to determine required fee for full value transfers
+      // it will throw not enough money error
+      subtractFeeFrom: [0],
+    });
+    await wallet.close();
     return tx.getFee();
   }
 
