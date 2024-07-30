@@ -144,7 +144,7 @@ export class EthereumWallet implements ScanWallet {
       throw new Error('Failed to retrieve base fee.');
     }
     const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
-    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
+    const maxFeePerGas = baseFee + ((baseFee * 5n) / 100n) + maxPriorityFeePerGas;
     const gasLimit = 21_000;
     return { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
   }
