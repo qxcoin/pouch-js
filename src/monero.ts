@@ -168,13 +168,14 @@ export class MoneroWallet implements SyncWallet {
 
   async estimateTransactionFee(from: Address, to: string, value: bigint): Promise<bigint> {
     const wallet = await this.getWalletFull();
+    // without `subtractFeeFrom` property we won't be able to determine required fee for full value transfers
+    // it will throw not enough money error, but even with this property, it will still throw
+    // not enough money when the destination won't get enough money
     const tx = await wallet.createTx({
       address: to,
       amount: value,
       accountIndex: from.accountIndex,
       subaddressIndex: from.index,
-      // without this property we won't be able to determine required fee for full value transfers
-      // it will throw not enough money error
       subtractFeeFrom: [0],
     });
     await wallet.close();
