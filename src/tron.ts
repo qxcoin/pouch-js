@@ -173,7 +173,7 @@ export class TronWallet implements ScanWallet {
       throw new UnsupportedTransactionError(tx.txID, `Transaction [${tx.txID}] does not trigger the transfer (a9059cbb) contract method.`);
     }
     // const decoded = tronUtils.abi.decodeParams([], ["address", "uint256"], value.data, true);
-    const decoded = this.decodeParams(value.data);
+    const decoded = this.decodeTransferParams(value.data);
     const from = this.encodeAddress(value.owner_address);
     const to = this.encodeAddress(decoded[0]);
     const contractAddress = this.encodeAddress(value.contract_address);
@@ -181,7 +181,7 @@ export class TronWallet implements ScanWallet {
   }
 
   // see: https://github.com/tronprotocol/tronweb/issues/540
-  private decodeParams(data: string): [string, bigint] {
+  private decodeTransferParams(data: string): [string, bigint] {
     const d = eth.abi.decodeParameters(['address', 'uint256'], `0x${data.slice(8)}`);
     const addr = tronUtils.address.ADDRESS_PREFIX + (d[0] as string).slice(2).toLowerCase();
     const value = d[1] as bigint;
@@ -296,7 +296,9 @@ export class TronWallet implements ScanWallet {
   }
 
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
-    const feeLimit = await this.estimateTokenTransactionFee(contractAddress, from, to, value);
+    let feeLimit: bigint | undefined = await this.estimateTokenTransactionFee(contractAddress, from, to, value);
+    // if we have enough energy and bandwidth, feeLimit will be 0
+    if (feeLimit <= 0n) feeLimit = undefined;
     const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value, feeLimit);
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
