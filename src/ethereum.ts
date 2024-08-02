@@ -210,4 +210,8 @@ export class EthereumWallet implements ScanWallet {
     }
     return await balanceOf(address).call();
   }
+
+  async isTransactionConfirmed(txHeight: number): Promise<boolean> {
+    return true;
+  }
 }

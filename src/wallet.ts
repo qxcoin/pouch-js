@@ -112,6 +112,7 @@ export interface SyncWallet {
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
   getAddressBalance(address: string): Promise<bigint>;
   getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint>;
+  isTransactionConfirmed(txHeight: number): Promise<boolean>;
 }
 
 export interface ScanWallet {
@@ -128,6 +129,7 @@ export interface ScanWallet {
   broadcastTransaction(transaction: RawTransaction): Promise<void>;
   getAddressBalance(address: string): Promise<bigint>;
   getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint>;
+  isTransactionConfirmed(txHeight: number): Promise<boolean>;
 }
 
 export interface WalletConfigs {

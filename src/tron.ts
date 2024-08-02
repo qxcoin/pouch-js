@@ -316,4 +316,8 @@ export class TronWallet implements ScanWallet {
     const decoded = this.tronweb.utils.abi.decodeParams([], ['uint256'], `0x${result}`);
     return decoded[0];
   }
+
+  async isTransactionConfirmed(txHeight: number): Promise<boolean> {
+    return true;
+  }
 }

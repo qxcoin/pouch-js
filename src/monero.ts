@@ -207,4 +207,10 @@ export class MoneroWallet implements SyncWallet {
   async getAddressTokenBalance(contractAddress: string, address: string): Promise<bigint> {
     throw new Error('Tokens are not supported by Bitcoin blockchain.');
   }
+
+  async isTransactionConfirmed(txHeight: number): Promise<boolean> {
+    const currentHeight = await this.getSyncedBlockHeight();
+    if (txHeight > currentHeight) return false;
+    else return (currentHeight - txHeight) >= 10;
+  }
 }

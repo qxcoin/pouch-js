@@ -352,4 +352,8 @@ export class BitcoinWallet implements ScanWallet {
     const hash = bitcoinJs.crypto.sha256(script);
     return hash.reverse().toString('hex');
   }
+
+  async isTransactionConfirmed(txHeight: number): Promise<boolean> {
+    return true;
+  }
 }
