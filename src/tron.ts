@@ -275,12 +275,10 @@ export class TronWallet implements ScanWallet {
     return estimateEnergy.energy_used;
   }
 
-  private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, feeLimit?: bigint): Promise<TronTypes.SignedTransaction> {
+  private async createTronSignedTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<TronTypes.SignedTransaction> {
     const func = 'transfer(address,uint256)';
     const parameter = [{ type: 'address', value: to }, { type: 'uint256', value: Number(value) }];
-    const options: TronTypes.TriggerSmartContractOptions = {};
-    if (undefined !== feeLimit) options.feeLimit = Number(feeLimit);
-    const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, options, parameter, from.hash);
+    const tx = await this.tronweb.transactionBuilder.triggerSmartContract(contractAddress, func, {}, parameter, from.hash);
     return await this.tronweb.trx.sign(tx.transaction, from.privateKey.toString('hex'));
   }
 
@@ -296,10 +294,7 @@ export class TronWallet implements ScanWallet {
   }
 
   async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
-    let feeLimit: bigint | undefined = await this.estimateTokenTransactionFee(contractAddress, from, to, value);
-    // if we have enough energy and bandwidth, feeLimit will be 0
-    if (feeLimit <= 0n) feeLimit = undefined;
-    const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value, feeLimit);
+    const signedTx = await this.createTronSignedTokenTransaction(contractAddress, from, to, value);
     return new RawTransaction(signedTx.txID, JSON.stringify(signedTx));
   }
 
