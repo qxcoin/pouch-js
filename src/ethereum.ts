@@ -138,19 +138,29 @@ export class EthereumWallet implements ScanWallet {
     return new TokenTransaction(hash, JSON.stringify(tx), tx.from, to, tx.to, value);
   }
 
-  private async createWeb3Transaction(from: Address, to: string, value: bigint): Promise<Web3Transaction> {
+  private async calcBaseFee() {
     const baseFee = (await this.web3.eth.getBlock()).baseFeePerGas;
     if (undefined === baseFee) {
       throw new Error('Failed to retrieve base fee.');
     }
+    return baseFee + ((baseFee * 5n) / 100n);
+  }
+
+  private extractBaseFeeFromUserFee(fee: bigint, gasLimit: number) {
     const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
-    const maxFeePerGas = baseFee + ((baseFee * 5n) / 100n) + maxPriorityFeePerGas;
+    return ((fee / BigInt(gasLimit)) - maxPriorityFeePerGas);
+  }
+
+  private async createWeb3Transaction(from: Address, to: string, value: bigint, fee?: bigint): Promise<Web3Transaction> {
     const gasLimit = 21_000;
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
+    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, gasLimit) : await this.calcBaseFee();
+    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     return { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
   }
 
-  async createTransaction(from: Address, to: string, value: bigint): Promise<RawTransaction> {
-    const tx = await this.createWeb3Transaction(from, to, value);
+  async createTransaction(from: Address, to: string, value: bigint, fee?: bigint): Promise<RawTransaction> {
+    const tx = await this.createWeb3Transaction(from, to, value, fee);
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
     return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
   }
@@ -162,20 +172,17 @@ export class EthereumWallet implements ScanWallet {
     return gasLimit * maxFeePerGas;
   }
 
-  private async createWeb3TokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<Web3Transaction> {
+  private async createWeb3TokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, fee?: bigint): Promise<Web3Transaction> {
     const contract = new this.web3.eth.Contract(ERC20.abi, contractAddress);
     const transfer = contract.methods['transfer'];
     if (!transfer) {
       throw new Error('Method [transfer] of the contract cannot be found.');
     }
     const data = transfer(to, value).encodeABI();
-    const baseFee = (await this.web3.eth.getBlock()).baseFeePerGas;
-    if (undefined === baseFee) {
-      throw new Error('Failed to retrieve base fee.');
-    }
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
-    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     const gasLimit = (21_000 + (68 * data.length)) * 2;
+    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
+    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, gasLimit) : await this.calcBaseFee();
+    const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     return { from: from.hash, to: contractAddress, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
   }
 
