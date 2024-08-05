@@ -72,7 +72,7 @@ export class EthereumWallet implements ScanWallet {
   }
 
   private async getBlockTransactions(height: number): Promise<Array<CoinTransaction | TokenTransaction>> {
-    const block = await this.web3.eth.getBlock(height, true, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
+    const block = await this.web3.eth.getBlock(height, true, { number: FMT_NUMBER.HEX, bytes: FMT_BYTES.HEX });
     const transactions: Array<CoinTransaction | TokenTransaction> = [];
     // NOTE: for empty blocks, `block.transaction` is not present
     // see: https://github.com/tronprotocol/tronweb/issues/522
@@ -93,7 +93,7 @@ export class EthereumWallet implements ScanWallet {
   }
 
   async getTransaction(hash: string): Promise<CoinTransaction | TokenTransaction> {
-    const tx = await this.web3.eth.getTransaction(hash, { number: FMT_NUMBER.NUMBER, bytes: FMT_BYTES.HEX });
+    const tx = await this.web3.eth.getTransaction(hash, { number: FMT_NUMBER.HEX, bytes: FMT_BYTES.HEX });
     const transaction = this.convertTx(tx);
     return transaction;
   }
