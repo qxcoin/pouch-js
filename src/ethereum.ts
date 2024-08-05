@@ -146,15 +146,14 @@ export class EthereumWallet implements ScanWallet {
     return baseFee + ((baseFee * 5n) / 100n);
   }
 
-  private extractBaseFeeFromUserFee(fee: bigint, gasLimit: number) {
-    const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
+  private extractBaseFeeFromUserFee(fee: bigint, maxPriorityFeePerGas: bigint, gasLimit: number) {
     return ((fee / BigInt(gasLimit)) - maxPriorityFeePerGas);
   }
 
   private async createWeb3Transaction(from: Address, to: string, value: bigint, fee?: bigint): Promise<Web3Transaction> {
     const gasLimit = 21_000;
     const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
-    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, gasLimit) : await this.calcBaseFee();
+    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, maxPriorityFeePerGas, gasLimit) : await this.calcBaseFee();
     const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     return { from: from.hash, to, value: this.web3.utils.toHex(value), gasLimit, maxFeePerGas, maxPriorityFeePerGas };
   }
@@ -181,13 +180,13 @@ export class EthereumWallet implements ScanWallet {
     const data = transfer(to, value).encodeABI();
     const gasLimit = (21_000 + (68 * data.length)) * 2;
     const maxPriorityFeePerGas = this.config.maxPriorityFeePerGas ?? 1_000_000_000n;
-    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, gasLimit) : await this.calcBaseFee();
+    const baseFee = fee ? this.extractBaseFeeFromUserFee(fee, maxPriorityFeePerGas, gasLimit) : await this.calcBaseFee();
     const maxFeePerGas = baseFee + maxPriorityFeePerGas;
     return { from: from.hash, to: contractAddress, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
   }
 
-  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint): Promise<RawTransaction> {
-    const tx = await this.createWeb3TokenTransaction(contractAddress, from, to, value);
+  async createTokenTransaction(contractAddress: string, from: Address, to: string, value: bigint, fee?: bigint): Promise<RawTransaction> {
+    const tx = await this.createWeb3TokenTransaction(contractAddress, from, to, value, fee);
     tx.gasLimit = await this.web3.eth.estimateGas({ from: tx.from, to: tx.to, data: tx.data });
     const signedTx = await this.web3.eth.accounts.signTransaction(tx, from.privateKey);
     return new RawTransaction(signedTx.transactionHash, signedTx.rawTransaction);
